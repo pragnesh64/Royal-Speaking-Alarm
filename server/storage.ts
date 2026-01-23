@@ -1,38 +1,77 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  users, alarms, medicines,
+  type User, type InsertUser,
+  type Alarm, type InsertAlarm,
+  type Medicine, type InsertMedicine
+} from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  getAlarms(userId: number): Promise<Alarm[]>;
+  createAlarm(alarm: InsertAlarm): Promise<Alarm>;
+  updateAlarm(id: number, alarm: Partial<InsertAlarm>): Promise<Alarm>;
+  deleteAlarm(id: number): Promise<void>;
+
+  getMedicines(userId: number): Promise<Medicine[]>;
+  createMedicine(medicine: InsertMedicine): Promise<Medicine>;
+  deleteMedicine(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
-  }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async getAlarms(userId: number): Promise<Alarm[]> {
+    return await db.select().from(alarms).where(eq(alarms.userId, userId));
+  }
+
+  async createAlarm(alarm: InsertAlarm): Promise<Alarm> {
+    const [newAlarm] = await db.insert(alarms).values(alarm).returning();
+    return newAlarm;
+  }
+
+  async updateAlarm(id: number, alarm: Partial<InsertAlarm>): Promise<Alarm> {
+    const [updatedAlarm] = await db
+      .update(alarms)
+      .set(alarm)
+      .where(eq(alarms.id, id))
+      .returning();
+    return updatedAlarm;
+  }
+
+  async deleteAlarm(id: number): Promise<void> {
+    await db.delete(alarms).where(eq(alarms.id, id));
+  }
+
+  async getMedicines(userId: number): Promise<Medicine[]> {
+    return await db.select().from(medicines).where(eq(medicines.userId, userId));
+  }
+
+  async createMedicine(medicine: InsertMedicine): Promise<Medicine> {
+    const [newMedicine] = await db.insert(medicines).values(medicine).returning();
+    return newMedicine;
+  }
+
+  async deleteMedicine(id: number): Promise<void> {
+    await db.delete(medicines).where(eq(medicines.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
