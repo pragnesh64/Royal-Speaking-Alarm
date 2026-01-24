@@ -19,19 +19,18 @@ export async function registerRoutes(
 
   // Alarms
   app.get(api.alarms.list.path, async (req, res) => {
-    // For MVP/Demo without proper logged-in user context in 'users' table (since we use Replit Auth separately),
-    // we'll simulate a user ID 1 or use the auth context if we sync them.
-    // To keep it simple for the blueprint integration:
-    // We'll assume a default user for demo purposes or strictly enforce auth.
-    // Let's use ID 1 for now as a placeholder or strict check.
-    const userId = 1; // TODO: Map Replit Auth user to our 'users' table
-    const alarms = await storage.getAlarms(userId);
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const alarms = await storage.getAlarms(req.user.id);
     res.json(alarms);
   });
 
   app.post(api.alarms.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.alarms.create.input.parse(req.body);
+      const input = api.alarms.create.input.parse({
+        ...req.body,
+        userId: req.user.id
+      });
       const alarm = await storage.createAlarm(input);
       res.status(201).json(alarm);
     } catch (err) {
@@ -44,6 +43,7 @@ export async function registerRoutes(
   });
 
   app.put(api.alarms.update.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const input = api.alarms.update.input.parse(req.body);
       const alarm = await storage.updateAlarm(Number(req.params.id), input);
@@ -58,20 +58,25 @@ export async function registerRoutes(
   });
 
   app.delete(api.alarms.delete.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     await storage.deleteAlarm(Number(req.params.id));
     res.status(204).end();
   });
 
   // Medicines
   app.get(api.medicines.list.path, async (req, res) => {
-    const userId = 1; // Placeholder
-    const medicines = await storage.getMedicines(userId);
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const medicines = await storage.getMedicines(req.user.id);
     res.json(medicines);
   });
 
   app.post(api.medicines.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.medicines.create.input.parse(req.body);
+      const input = api.medicines.create.input.parse({
+        ...req.body,
+        userId: req.user.id
+      });
       const medicine = await storage.createMedicine(input);
       res.status(201).json(medicine);
     } catch (err) {
@@ -84,6 +89,7 @@ export async function registerRoutes(
   });
 
   app.delete(api.medicines.delete.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     await storage.deleteMedicine(Number(req.params.id));
     res.status(204).end();
   });

@@ -8,28 +8,29 @@ import {
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
-  getAlarms(userId: number): Promise<Alarm[]>;
+  getAlarms(userId: string): Promise<Alarm[]>;
   createAlarm(alarm: InsertAlarm): Promise<Alarm>;
   updateAlarm(id: number, alarm: Partial<InsertAlarm>): Promise<Alarm>;
   deleteAlarm(id: number): Promise<void>;
 
-  getMedicines(userId: number): Promise<Medicine[]>;
+  getMedicines(userId: string): Promise<Medicine[]>;
   createMedicine(medicine: InsertMedicine): Promise<Medicine>;
   deleteMedicine(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    // Note: username column was replaced by email in unified schema
+    const [user] = await db.select().from(users).where(eq(users.email, username));
     return user;
   }
 
@@ -38,7 +39,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getAlarms(userId: number): Promise<Alarm[]> {
+  async getAlarms(userId: string): Promise<Alarm[]> {
     return await db.select().from(alarms).where(eq(alarms.userId, userId));
   }
 
@@ -60,7 +61,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(alarms).where(eq(alarms.id, id));
   }
 
-  async getMedicines(userId: number): Promise<Medicine[]> {
+  async getMedicines(userId: string): Promise<Medicine[]> {
     return await db.select().from(medicines).where(eq(medicines.userId, userId));
   }
 

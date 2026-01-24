@@ -29,7 +29,7 @@ export function AlarmModal() {
     createAlarm.mutate(
       {
         ...formData,
-        userId: 1, // Mock user ID, backend should handle via session ideally or we pass from auth context
+        userId: "", // Handled by backend from session
         days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // Default to daily for MVP
       },
       {
