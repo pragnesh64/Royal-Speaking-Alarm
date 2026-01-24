@@ -27,10 +27,10 @@ export async function registerRoutes(
   app.post(api.alarms.create.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.alarms.create.input.parse({
+      const input = {
         ...req.body,
         userId: req.user.id
-      });
+      };
       const alarm = await storage.createAlarm(input);
       res.status(201).json(alarm);
     } catch (err) {
@@ -73,10 +73,10 @@ export async function registerRoutes(
   app.post(api.medicines.create.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.medicines.create.input.parse({
+      const input = {
         ...req.body,
         userId: req.user.id
-      });
+      };
       const medicine = await storage.createMedicine(input);
       res.status(201).json(medicine);
     } catch (err) {
