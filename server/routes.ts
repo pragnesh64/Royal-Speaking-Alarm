@@ -20,7 +20,7 @@ export async function registerRoutes(
   // Alarms
   app.get(api.alarms.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const alarms = await storage.getAlarms(req.user.id);
+    const alarms = await storage.getAlarms((req.user as any).id);
     res.json(alarms);
   });
 
@@ -29,7 +29,7 @@ export async function registerRoutes(
     try {
       const input = {
         ...req.body,
-        userId: req.user.id
+        userId: (req.user as any).id
       };
       const alarm = await storage.createAlarm(input);
       res.status(201).json(alarm);
@@ -45,7 +45,10 @@ export async function registerRoutes(
   app.put(api.alarms.update.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.alarms.update.input.parse(req.body);
+      const input = {
+        ...req.body,
+        userId: (req.user as any).id
+      };
       const alarm = await storage.updateAlarm(Number(req.params.id), input);
       res.json(alarm);
     } catch (err) {
@@ -66,7 +69,7 @@ export async function registerRoutes(
   // Medicines
   app.get(api.medicines.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const medicines = await storage.getMedicines(req.user.id);
+    const medicines = await storage.getMedicines((req.user as any).id);
     res.json(medicines);
   });
 
@@ -91,7 +94,10 @@ export async function registerRoutes(
   app.put(api.medicines.update.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = api.medicines.update.input.parse(req.body);
+      const input = {
+        ...req.body,
+        userId: (req.user as any).id
+      };
       const medicine = await storage.updateMedicine(Number(req.params.id), input);
       res.json(medicine);
     } catch (err) {
