@@ -37,12 +37,15 @@ export const alarms = pgTable("alarms", {
   userId: varchar("user_id").notNull(),
   title: text("title").notNull(),
   time: text("time").notNull(), // HH:mm format
-  days: text("days").array(), // ["Mon", "Tue", ...]
+  date: text("date"), // YYYY-MM-DD for specific date alarms
+  days: text("days").array(), // ["Mon", "Tue", ...] for recurring
   isActive: boolean("is_active").default(true),
   type: text("type").default("speaking"), // speaking, custom_voice, text
-  voiceUrl: text("voice_url"), // URL to recorded audio
+  voiceUrl: text("voice_url"), // URL to recorded audio or uploaded image
+  imageUrl: text("image_url"), // New field for alarm photo
   textToSpeak: text("text_to_speak"),
   voiceGender: text("voice_gender").default("female"), // male, female
+  language: text("language").default("english"), // Added language support
 });
 
 export const medicines = pgTable("medicines", {
@@ -50,7 +53,8 @@ export const medicines = pgTable("medicines", {
   userId: varchar("user_id").notNull(),
   name: text("name").notNull(),
   photoUrl: text("photo_url"),
-  timeOfDay: text("time_of_day").notNull(), // morning, afternoon, evening, night
+  timeOfDay: text("time_of_day"), // Keep for backward compatibility or migration
+  times: text("times").array(), // Multiple times per day ["08:00", "14:00", "20:00"]
   dosage: text("dosage"),
 });
 
