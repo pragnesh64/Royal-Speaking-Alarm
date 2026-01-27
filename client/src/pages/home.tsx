@@ -5,166 +5,167 @@ import { Clock } from "lucide-react";
 const RoutineIcon = () => (
   <svg viewBox="0 0 120 120" className="w-24 h-24">
     <defs>
-      <linearGradient id="clock3dR" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#64b5f6"/>
-        <stop offset="30%" stopColor="#42a5f5"/>
-        <stop offset="70%" stopColor="#1e88e5"/>
-        <stop offset="100%" stopColor="#1565c0"/>
+      <linearGradient id="royalBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#1a237e"/>
+        <stop offset="50%" stopColor="#002E6E"/>
+        <stop offset="100%" stopColor="#0d1b3e"/>
       </linearGradient>
-      <linearGradient id="bell3dR" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ffeb3b"/>
-        <stop offset="50%" stopColor="#ffc107"/>
-        <stop offset="100%" stopColor="#ff8f00"/>
+      <linearGradient id="royalGold" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ffd700"/>
+        <stop offset="30%" stopColor="#daa520"/>
+        <stop offset="70%" stopColor="#b8860b"/>
+        <stop offset="100%" stopColor="#8b6914"/>
       </linearGradient>
-      <linearGradient id="faceR" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ffffff"/>
-        <stop offset="100%" stopColor="#e3f2fd"/>
+      <linearGradient id="royalFace" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#fefefe"/>
+        <stop offset="100%" stopColor="#f0f4f8"/>
       </linearGradient>
-      <filter id="shadow3d" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3"/>
+      <filter id="royalShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="5" stdDeviation="4" floodColor="#0d1b3e" floodOpacity="0.4"/>
       </filter>
-      <radialGradient id="shineR" cx="30%" cy="30%" r="50%">
-        <stop offset="0%" stopColor="white" stopOpacity="0.6"/>
+      <radialGradient id="royalShine" cx="35%" cy="25%" r="40%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.7"/>
         <stop offset="100%" stopColor="white" stopOpacity="0"/>
       </radialGradient>
     </defs>
-    <ellipse cx="60" cy="112" rx="25" ry="6" fill="#1565c0" opacity="0.25"/>
-    <g filter="url(#shadow3d)">
-      <ellipse cx="30" cy="30" rx="14" ry="12" fill="url(#bell3dR)"/>
-      <ellipse cx="90" cy="30" rx="14" ry="12" fill="url(#bell3dR)"/>
-      <rect x="55" y="16" width="10" height="14" rx="3" fill="#1565c0"/>
-      <circle cx="60" cy="62" r="40" fill="url(#clock3dR)"/>
-      <circle cx="60" cy="62" r="32" fill="url(#faceR)"/>
-      <circle cx="60" cy="62" r="40" fill="url(#shineR)"/>
+    <ellipse cx="60" cy="112" rx="28" ry="6" fill="#0d1b3e" opacity="0.3"/>
+    <g filter="url(#royalShadow)">
+      <ellipse cx="28" cy="28" rx="14" ry="11" fill="url(#royalGold)"/>
+      <ellipse cx="92" cy="28" rx="14" ry="11" fill="url(#royalGold)"/>
+      <ellipse cx="28" cy="26" rx="8" ry="5" fill="#ffd700" opacity="0.5"/>
+      <ellipse cx="92" cy="26" rx="8" ry="5" fill="#ffd700" opacity="0.5"/>
+      <rect x="54" y="14" width="12" height="16" rx="4" fill="url(#royalBlue)"/>
+      <circle cx="60" cy="64" r="42" fill="url(#royalBlue)"/>
+      <circle cx="60" cy="64" r="36" fill="url(#royalFace)"/>
+      <circle cx="60" cy="64" r="42" fill="url(#royalShine)"/>
     </g>
-    <circle cx="60" cy="48" r="2" fill="#1565c0"/>
-    <circle cx="74" cy="62" r="2" fill="#1565c0"/>
-    <circle cx="60" cy="76" r="2" fill="#1565c0"/>
-    <circle cx="46" cy="62" r="2" fill="#1565c0"/>
-    <line x1="60" y1="62" x2="60" y2="48" stroke="#0d47a1" strokeWidth="3" strokeLinecap="round"/>
-    <line x1="60" y1="62" x2="72" y2="62" stroke="#1565c0" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="60" cy="62" r="4" fill="#0d47a1"/>
-    <circle cx="60" cy="62" r="2" fill="#ffc107"/>
-    <text x="92" y="18" fontSize="14" fill="#1976d2" fontWeight="bold">Z</text>
-    <text x="102" y="10" fontSize="11" fill="#42a5f5" fontWeight="bold">z</text>
-    <text x="108" y="4" fontSize="8" fill="#90caf9" fontWeight="bold">z</text>
+    <circle cx="60" cy="64" r="32" fill="none" stroke="url(#royalGold)" strokeWidth="2"/>
+    <circle cx="60" cy="46" r="3" fill="url(#royalGold)"/>
+    <circle cx="78" cy="64" r="3" fill="url(#royalGold)"/>
+    <circle cx="60" cy="82" r="3" fill="url(#royalGold)"/>
+    <circle cx="42" cy="64" r="3" fill="url(#royalGold)"/>
+    <line x1="60" y1="64" x2="60" y2="48" stroke="#002E6E" strokeWidth="4" strokeLinecap="round"/>
+    <line x1="60" y1="64" x2="74" y2="64" stroke="#002E6E" strokeWidth="3" strokeLinecap="round"/>
+    <circle cx="60" cy="64" r="5" fill="url(#royalGold)"/>
+    <text x="96" y="16" fontSize="13" fill="#ffd700" fontWeight="bold" fontStyle="italic">Z</text>
+    <text x="104" y="8" fontSize="10" fill="#daa520" fontWeight="bold" fontStyle="italic">z</text>
   </svg>
 );
 
 const MedicineIcon = () => (
   <svg viewBox="0 0 120 120" className="w-24 h-24">
     <defs>
-      <linearGradient id="capsule3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ff8a80"/>
-        <stop offset="50%" stopColor="#ff5252"/>
-        <stop offset="100%" stopColor="#d32f2f"/>
+      <linearGradient id="royalBottle" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#1a237e"/>
+        <stop offset="50%" stopColor="#002E6E"/>
+        <stop offset="100%" stopColor="#0d1b3e"/>
       </linearGradient>
-      <linearGradient id="capsule3dW" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ffffff"/>
-        <stop offset="50%" stopColor="#fafafa"/>
-        <stop offset="100%" stopColor="#e0e0e0"/>
+      <linearGradient id="royalCap" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ffd700"/>
+        <stop offset="50%" stopColor="#daa520"/>
+        <stop offset="100%" stopColor="#8b6914"/>
       </linearGradient>
-      <linearGradient id="bottle3d" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#81d4fa"/>
-        <stop offset="30%" stopColor="#4fc3f7"/>
-        <stop offset="70%" stopColor="#29b6f6"/>
-        <stop offset="100%" stopColor="#0288d1"/>
+      <linearGradient id="royalPillRed" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#c62828"/>
+        <stop offset="50%" stopColor="#b71c1c"/>
+        <stop offset="100%" stopColor="#7f0000"/>
       </linearGradient>
-      <linearGradient id="heart3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ff8a80"/>
-        <stop offset="50%" stopColor="#f44336"/>
-        <stop offset="100%" stopColor="#c62828"/>
+      <linearGradient id="royalPillGold" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ffd700"/>
+        <stop offset="100%" stopColor="#b8860b"/>
       </linearGradient>
-      <filter id="shadow3dM" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3"/>
+      <filter id="royalShadowM" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="5" stdDeviation="4" floodColor="#0d1b3e" floodOpacity="0.4"/>
       </filter>
-      <radialGradient id="shineM" cx="30%" cy="30%" r="50%">
-        <stop offset="0%" stopColor="white" stopOpacity="0.5"/>
+      <radialGradient id="royalShineM" cx="30%" cy="25%" r="40%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.4"/>
         <stop offset="100%" stopColor="white" stopOpacity="0"/>
       </radialGradient>
     </defs>
-    <ellipse cx="60" cy="112" rx="30" ry="6" fill="#0288d1" opacity="0.2"/>
-    <g filter="url(#shadow3dM)">
-      <rect x="40" y="35" width="40" height="60" rx="8" fill="url(#bottle3d)"/>
-      <rect x="45" y="25" width="30" height="14" rx="4" fill="#01579b"/>
-      <rect x="48" y="50" width="24" height="20" rx="3" fill="white" opacity="0.9"/>
-      <path d="M55 55 L60 62 L70 52" fill="none" stroke="#4caf50" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+    <ellipse cx="60" cy="112" rx="32" ry="6" fill="#0d1b3e" opacity="0.3"/>
+    <g filter="url(#royalShadowM)">
+      <rect x="35" y="32" width="50" height="68" rx="10" fill="url(#royalBottle)"/>
+      <rect x="35" y="32" width="50" height="68" rx="10" fill="url(#royalShineM)"/>
+      <rect x="42" y="20" width="36" height="18" rx="6" fill="url(#royalCap)"/>
+      <ellipse cx="60" cy="24" rx="14" ry="4" fill="#ffd700" opacity="0.5"/>
+      <rect x="45" y="50" width="30" height="30" rx="5" fill="white" opacity="0.95"/>
+      <path d="M52 60 L58 68 L72 54" fill="none" stroke="#ffd700" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
     </g>
-    <g filter="url(#shadow3dM)" transform="translate(5, 70) rotate(-30)">
-      <rect x="0" y="0" width="28" height="12" rx="6" fill="url(#capsule3d)"/>
-      <rect x="14" y="0" width="14" height="12" rx="6" fill="url(#capsule3dW)"/>
-      <ellipse cx="14" cy="6" rx="3" ry="5" fill="url(#shineM)"/>
+    <g filter="url(#royalShadowM)" transform="translate(8, 75) rotate(-20)">
+      <ellipse cx="14" cy="7" rx="14" ry="7" fill="url(#royalPillRed)"/>
+      <ellipse cx="20" cy="7" rx="8" ry="7" fill="white"/>
+      <ellipse cx="10" cy="5" rx="4" ry="2" fill="white" opacity="0.4"/>
     </g>
-    <g filter="url(#shadow3dM)" transform="translate(80, 55) rotate(15)">
-      <rect x="0" y="0" width="24" height="10" rx="5" fill="url(#capsule3dW)"/>
-      <rect x="0" y="0" width="12" height="10" rx="5" fill="#ffc107"/>
+    <g filter="url(#royalShadowM)" transform="translate(85, 60) rotate(25)">
+      <ellipse cx="10" cy="6" rx="12" ry="6" fill="url(#royalPillGold)"/>
+      <ellipse cx="16" cy="6" rx="6" ry="6" fill="white"/>
     </g>
-    <g filter="url(#shadow3dM)">
-      <path d="M100 30 C100 24 94 18 88 18 C82 18 78 24 78 28 C78 36 88 44 88 44 C88 44 100 36 100 30 Z" fill="url(#heart3d)"/>
+    <g filter="url(#royalShadowM)">
+      <path d="M104 28 C104 20 96 14 88 14 C80 14 74 20 74 26 C74 36 88 48 88 48 C88 48 104 36 104 28 Z" fill="url(#royalCap)"/>
     </g>
-    <circle cx="14" cy="28" r="8" fill="#66bb6a"/>
-    <text x="10" y="32" fontSize="12" fill="white" fontWeight="bold">+</text>
   </svg>
 );
 
 const MeetingIcon = () => (
   <svg viewBox="0 0 120 120" className="w-24 h-24">
     <defs>
-      <linearGradient id="calendar3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#b39ddb"/>
-        <stop offset="30%" stopColor="#9575cd"/>
-        <stop offset="70%" stopColor="#7e57c2"/>
-        <stop offset="100%" stopColor="#5e35b1"/>
+      <linearGradient id="royalCalendar" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#1a237e"/>
+        <stop offset="50%" stopColor="#002E6E"/>
+        <stop offset="100%" stopColor="#0d1b3e"/>
       </linearGradient>
-      <linearGradient id="calTop3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#7e57c2"/>
-        <stop offset="100%" stopColor="#4527a0"/>
+      <linearGradient id="royalCalTop" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ffd700"/>
+        <stop offset="50%" stopColor="#daa520"/>
+        <stop offset="100%" stopColor="#8b6914"/>
       </linearGradient>
-      <linearGradient id="person3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#4fc3f7"/>
-        <stop offset="50%" stopColor="#29b6f6"/>
-        <stop offset="100%" stopColor="#0288d1"/>
+      <linearGradient id="royalPerson1" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#1565c0"/>
+        <stop offset="100%" stopColor="#0d47a1"/>
       </linearGradient>
-      <linearGradient id="person3d2" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#81c784"/>
-        <stop offset="50%" stopColor="#66bb6a"/>
-        <stop offset="100%" stopColor="#43a047"/>
+      <linearGradient id="royalPerson2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#c62828"/>
+        <stop offset="100%" stopColor="#8b0000"/>
       </linearGradient>
-      <linearGradient id="face3d" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#ffcc80"/>
-        <stop offset="100%" stopColor="#ffb74d"/>
+      <linearGradient id="royalFace" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#ffe4c4"/>
+        <stop offset="100%" stopColor="#deb887"/>
       </linearGradient>
-      <filter id="shadow3dMt" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3"/>
+      <filter id="royalShadowMt" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="5" stdDeviation="4" floodColor="#0d1b3e" floodOpacity="0.4"/>
       </filter>
+      <radialGradient id="royalShineMt" cx="30%" cy="20%" r="40%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.3"/>
+        <stop offset="100%" stopColor="white" stopOpacity="0"/>
+      </radialGradient>
     </defs>
-    <ellipse cx="60" cy="112" rx="35" ry="6" fill="#5e35b1" opacity="0.2"/>
-    <g filter="url(#shadow3dMt)">
-      <rect x="30" y="25" width="60" height="70" rx="6" fill="url(#calendar3d)"/>
-      <rect x="30" y="25" width="60" height="18" rx="6" fill="url(#calTop3d)"/>
-      <rect x="30" y="37" width="60" height="6" fill="url(#calTop3d)"/>
-      <rect x="40" y="18" width="6" height="16" rx="3" fill="#37474f"/>
-      <rect x="74" y="18" width="6" height="16" rx="3" fill="#37474f"/>
-      <rect x="38" y="50" width="44" height="38" rx="3" fill="white" opacity="0.95"/>
+    <ellipse cx="60" cy="112" rx="35" ry="6" fill="#0d1b3e" opacity="0.3"/>
+    <g filter="url(#royalShadowMt)">
+      <rect x="25" y="22" width="70" height="78" rx="8" fill="url(#royalCalendar)"/>
+      <rect x="25" y="22" width="70" height="78" rx="8" fill="url(#royalShineMt)"/>
+      <rect x="25" y="22" width="70" height="22" rx="8" fill="url(#royalCalTop)"/>
+      <ellipse cx="60" cy="28" rx="25" ry="5" fill="#ffd700" opacity="0.4"/>
+      <rect x="38" y="14" width="8" height="18" rx="4" fill="url(#royalCalendar)"/>
+      <rect x="74" y="14" width="8" height="18" rx="4" fill="url(#royalCalendar)"/>
+      <rect x="33" y="50" width="54" height="42" rx="4" fill="white" opacity="0.95"/>
     </g>
-    <g filter="url(#shadow3dMt)">
-      <circle cx="50" cy="64" r="8" fill="url(#face3d)"/>
-      <ellipse cx="50" cy="80" rx="8" ry="10" fill="url(#person3d)"/>
+    <g filter="url(#royalShadowMt)">
+      <circle cx="48" cy="66" r="10" fill="url(#royalFace)"/>
+      <ellipse cx="48" cy="84" rx="10" ry="12" fill="url(#royalPerson1)"/>
+      <ellipse cx="48" cy="76" rx="4" ry="2" fill="#ffd700"/>
     </g>
-    <g filter="url(#shadow3dMt)">
-      <circle cx="70" cy="64" r="8" fill="url(#face3d)"/>
-      <ellipse cx="70" cy="80" rx="8" ry="10" fill="url(#person3d2)"/>
+    <g filter="url(#royalShadowMt)">
+      <circle cx="72" cy="66" r="10" fill="url(#royalFace)"/>
+      <ellipse cx="72" cy="84" rx="10" ry="12" fill="url(#royalPerson2)"/>
+      <ellipse cx="72" cy="76" rx="4" ry="2" fill="#ffd700"/>
     </g>
-    <circle cx="47" cy="62" r="1.5" fill="#5d4037"/>
-    <circle cx="53" cy="62" r="1.5" fill="#5d4037"/>
-    <path d="M47 67 Q50 70 53 67" fill="none" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="67" cy="62" r="1.5" fill="#5d4037"/>
-    <circle cx="73" cy="62" r="1.5" fill="#5d4037"/>
-    <path d="M67 67 Q70 70 73 67" fill="none" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="15" cy="50" r="10" fill="#ffc107"/>
-    <line x1="15" y1="50" x2="15" y2="43" stroke="#ff6f00" strokeWidth="2" strokeLinecap="round"/>
-    <line x1="15" y1="50" x2="20" y2="50" stroke="#ff6f00" strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="15" cy="50" r="2" fill="#ff6f00"/>
+    <circle cx="45" cy="64" r="2" fill="#002E6E"/>
+    <circle cx="51" cy="64" r="2" fill="#002E6E"/>
+    <path d="M44 70 Q48 74 52 70" fill="none" stroke="#002E6E" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="69" cy="64" r="2" fill="#002E6E"/>
+    <circle cx="75" cy="64" r="2" fill="#002E6E"/>
+    <path d="M68 70 Q72 74 76 70" fill="none" stroke="#002E6E" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M56 56 L60 48 L64 56 L60 54 Z" fill="#ffd700"/>
   </svg>
 );
 
