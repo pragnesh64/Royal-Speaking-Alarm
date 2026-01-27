@@ -97,10 +97,6 @@ const MedicineIcon = () => (
       <ellipse cx="10" cy="6" rx="12" ry="6" fill="url(#pillOrange)"/>
       <ellipse cx="16" cy="6" rx="6" ry="6" fill="white"/>
     </g>
-    <g filter="url(#paytmShadowM)">
-      <path d="M104 28 C104 20 96 14 88 14 C80 14 74 20 74 26 C74 36 88 48 88 48 C88 48 104 36 104 28 Z" fill="#ff5252"/>
-      <path d="M92 24 L92 34 M87 29 L97 29" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-    </g>
   </svg>
 );
 
