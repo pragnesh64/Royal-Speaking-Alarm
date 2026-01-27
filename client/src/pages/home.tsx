@@ -222,7 +222,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="w-full max-w-sm space-y-6 pb-8">
+        <div className="w-full max-w-sm space-y-8 pb-8">
           {cards.map((card) => {
             const IconComponent = card.icon;
             return (
