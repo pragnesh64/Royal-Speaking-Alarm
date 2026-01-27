@@ -73,7 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-20 h-16 royal-gradient flex items-center justify-between px-4 shadow-md">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between px-4 shadow-md" style={{ background: 'linear-gradient(135deg, #002E6E 0%, #001a40 100%)' }}>
         <h1 className="text-xl font-bold text-white">PA Alarm</h1>
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white p-2">
           {mobileMenuOpen ? <X /> : <Menu />}
@@ -82,8 +82,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-10 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}>
-          <div className="w-64 h-full royal-gradient flex flex-col pt-16" onClick={e => e.stopPropagation()}>
+        <div className="lg:hidden fixed inset-0 z-30 bg-black/60" onClick={() => setMobileMenuOpen(false)}>
+          <div 
+            className="w-72 h-full flex flex-col pt-16 shadow-2xl" 
+            style={{ background: 'linear-gradient(135deg, #002E6E 0%, #001a40 100%)' }}
+            onClick={e => e.stopPropagation()}
+          >
             <NavContent />
           </div>
         </div>

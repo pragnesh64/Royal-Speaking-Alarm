@@ -29,9 +29,6 @@ export const users = pgTable("users", {
   language: text("language").default("english"),
 });
 
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
-
 export const alarms = pgTable("alarms", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
