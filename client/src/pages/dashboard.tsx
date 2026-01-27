@@ -53,18 +53,33 @@ export default function Dashboard() {
   }, [alarms, activeAlarms]);
 
   const triggerAlarm = (alarm: any) => {
+    console.log("Triggering alarm:", alarm.id);
     // Play sound/TTS
     if (alarm.voiceUrl) {
       const audio = new Audio(alarm.voiceUrl);
-      audio.play().catch(console.error);
+      audio.play().catch(err => {
+        console.error("Audio playback failed:", err);
+        // Fallback to TTS if audio fails
+        if (alarm.textToSpeak) speakTTS(alarm);
+      });
     } else if (alarm.textToSpeak) {
-      const utterance = new SpeechSynthesisUtterance(alarm.textToSpeak);
-      utterance.lang = alarm.language === 'hindi' ? 'hi-IN' : alarm.language === 'marathi' ? 'mr-IN' : 'en-US';
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith(utterance.lang.slice(0, 2)) && v.name.includes(alarm.voiceGender === 'female' ? 'Female' : 'Male'));
-      if (preferred) utterance.voice = preferred;
-      window.speechSynthesis.speak(utterance);
+      speakTTS(alarm);
     }
+  };
+
+  const speakTTS = (alarm: any) => {
+    const utterance = new SpeechSynthesisUtterance(alarm.textToSpeak || "");
+    utterance.lang = alarm.language === 'hindi' ? 'hi-IN' : alarm.language === 'marathi' ? 'mr-IN' : 'en-US';
+    
+    // Ensure speech synthesis is ready
+    window.speechSynthesis.cancel(); 
+    
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find((v: any) => v.lang.startsWith(utterance.lang.slice(0, 2)) && v.name.includes(alarm.voiceGender === 'female' ? 'Female' : 'Male')) || 
+                    voices.find((v: any) => v.lang.startsWith(utterance.lang.slice(0, 2)));
+    
+    if (preferred) utterance.voice = preferred;
+    window.speechSynthesis.speak(utterance);
   };
 
   if (isLoading) {

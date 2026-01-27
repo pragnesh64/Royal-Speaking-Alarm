@@ -90,7 +90,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-20 lg:pt-8 min-h-screen">
+      <main 
+        className="flex-1 lg:ml-72 p-4 md:p-8 pt-20 lg:pt-8 min-h-screen"
+        onClick={() => {
+          // Unlock audio/speech on first user interaction
+          if (!window.speechSynthesis.speaking) {
+            const dummy = new SpeechSynthesisUtterance("");
+            window.speechSynthesis.speak(dummy);
+          }
+        }}
+      >
         <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
           {children}
         </div>
