@@ -2,18 +2,88 @@ import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 
-const AlarmClockIcon = () => (
-  <svg viewBox="0 0 100 100" className="w-20 h-20">
-    <circle cx="50" cy="55" r="32" fill="#e3f2fd" stroke="#1976d2" strokeWidth="3"/>
-    <circle cx="50" cy="55" r="26" fill="white" stroke="#1976d2" strokeWidth="2"/>
-    <line x1="50" y1="55" x2="50" y2="38" stroke="#1976d2" strokeWidth="3" strokeLinecap="round"/>
-    <line x1="50" y1="55" x2="62" y2="55" stroke="#1976d2" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="50" cy="55" r="3" fill="#1976d2"/>
-    <ellipse cx="25" cy="30" rx="10" ry="8" fill="#ffb74d" stroke="#f57c00" strokeWidth="2"/>
-    <ellipse cx="75" cy="30" rx="10" ry="8" fill="#ffb74d" stroke="#f57c00" strokeWidth="2"/>
-    <rect x="45" y="18" width="10" height="8" rx="2" fill="#1976d2"/>
-    <text x="82" y="28" fontSize="12" fill="#1976d2" fontWeight="bold">z</text>
-    <text x="88" y="22" fontSize="10" fill="#1976d2" fontWeight="bold">z</text>
+const RoutineIcon = () => (
+  <svg viewBox="0 0 120 120" className="w-24 h-24">
+    <defs>
+      <linearGradient id="clockBody" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#e3f2fd"/>
+        <stop offset="100%" stopColor="#bbdefb"/>
+      </linearGradient>
+      <linearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ffcc80"/>
+        <stop offset="100%" stopColor="#ffb74d"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="22" cy="32" rx="14" ry="10" fill="url(#bellGrad)" stroke="#e65100" strokeWidth="2"/>
+    <ellipse cx="98" cy="32" rx="14" ry="10" fill="url(#bellGrad)" stroke="#e65100" strokeWidth="2"/>
+    <circle cx="60" cy="65" r="38" fill="url(#clockBody)" stroke="#1565c0" strokeWidth="4"/>
+    <circle cx="60" cy="65" r="30" fill="white" stroke="#1976d2" strokeWidth="2"/>
+    <line x1="60" y1="65" x2="60" y2="42" stroke="#1565c0" strokeWidth="4" strokeLinecap="round"/>
+    <line x1="60" y1="65" x2="78" y2="65" stroke="#1976d2" strokeWidth="3" strokeLinecap="round"/>
+    <circle cx="60" cy="65" r="4" fill="#1565c0"/>
+    <rect x="54" y="20" width="12" height="10" rx="3" fill="#1565c0"/>
+    <ellipse cx="60" cy="108" rx="20" ry="4" fill="#90caf9" opacity="0.5"/>
+    <text x="100" y="28" fontSize="14" fill="#1976d2" fontWeight="bold" fontStyle="italic">z</text>
+    <text x="108" y="20" fontSize="12" fill="#42a5f5" fontWeight="bold" fontStyle="italic">z</text>
+  </svg>
+);
+
+const MedicineIcon = () => (
+  <svg viewBox="0 0 120 120" className="w-24 h-24">
+    <defs>
+      <linearGradient id="pillGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ef5350"/>
+        <stop offset="100%" stopColor="#e53935"/>
+      </linearGradient>
+      <linearGradient id="pillGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fff9c4"/>
+        <stop offset="100%" stopColor="#fff59d"/>
+      </linearGradient>
+      <linearGradient id="bottleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#81d4fa"/>
+        <stop offset="100%" stopColor="#4fc3f7"/>
+      </linearGradient>
+    </defs>
+    <rect x="35" y="35" width="50" height="70" rx="8" fill="url(#bottleGrad)" stroke="#0288d1" strokeWidth="3"/>
+    <rect x="40" y="25" width="40" height="15" rx="4" fill="#0288d1"/>
+    <rect x="45" y="50" width="30" height="20" rx="4" fill="white" opacity="0.9"/>
+    <text x="52" y="64" fontSize="10" fill="#0288d1" fontWeight="bold">Rx</text>
+    <ellipse cx="25" cy="45" rx="15" ry="8" fill="url(#pillGrad1)" stroke="#c62828" strokeWidth="2" transform="rotate(-30 25 45)"/>
+    <ellipse cx="25" cy="45" rx="7" ry="8" fill="url(#pillGrad2)" stroke="#f9a825" strokeWidth="1" transform="rotate(-30 25 45)"/>
+    <circle cx="95" cy="85" r="12" fill="#66bb6a" stroke="#388e3c" strokeWidth="2"/>
+    <text x="91" y="90" fontSize="14" fill="white" fontWeight="bold">+</text>
+    <ellipse cx="60" cy="112" rx="25" ry="4" fill="#81d4fa" opacity="0.4"/>
+  </svg>
+);
+
+const MeetingIcon = () => (
+  <svg viewBox="0 0 120 120" className="w-24 h-24">
+    <defs>
+      <linearGradient id="person1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#7986cb"/>
+        <stop offset="100%" stopColor="#5c6bc0"/>
+      </linearGradient>
+      <linearGradient id="person2" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4db6ac"/>
+        <stop offset="100%" stopColor="#26a69a"/>
+      </linearGradient>
+      <linearGradient id="person3" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ffb74d"/>
+        <stop offset="100%" stopColor="#ffa726"/>
+      </linearGradient>
+    </defs>
+    <circle cx="60" cy="35" r="16" fill="#ffcc80" stroke="#e65100" strokeWidth="2"/>
+    <ellipse cx="60" cy="75" rx="22" ry="25" fill="url(#person1)" stroke="#3949ab" strokeWidth="2"/>
+    <circle cx="60" cy="30" r="3" fill="#5d4037"/>
+    <path d="M54 38 Q60 44 66 38" fill="none" stroke="#5d4037" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="25" cy="50" r="12" fill="#ffcc80" stroke="#e65100" strokeWidth="2"/>
+    <ellipse cx="25" cy="85" rx="16" ry="20" fill="url(#person2)" stroke="#00897b" strokeWidth="2"/>
+    <circle cx="95" cy="50" r="12" fill="#ffcc80" stroke="#e65100" strokeWidth="2"/>
+    <ellipse cx="95" cy="85" rx="16" ry="20" fill="url(#person3)" stroke="#f57c00" strokeWidth="2"/>
+    <ellipse cx="60" cy="108" rx="35" ry="4" fill="#9fa8da" opacity="0.4"/>
+    <circle cx="45" cy="20" r="4" fill="#ec407a"/>
+    <circle cx="75" cy="18" r="3" fill="#42a5f5"/>
+    <circle cx="85" cy="25" r="2" fill="#66bb6a"/>
   </svg>
 );
 
@@ -40,9 +110,9 @@ export default function Home() {
   };
 
   const cards = [
-    { href: "/routine", title: "Set Your Routine" },
-    { href: "/medicines", title: "Set Your Medicine" },
-    { href: "/meetings", title: "Set Your Meeting" }
+    { href: "/routine", title: "Set Your Routine", icon: RoutineIcon },
+    { href: "/medicines", title: "Set Your Medicine", icon: MedicineIcon },
+    { href: "/meetings", title: "Set Your Meeting", icon: MeetingIcon }
   ];
 
   return (
@@ -60,39 +130,43 @@ export default function Home() {
 
       <div className="flex-1 flex flex-col items-center px-4">
         <div className="text-center mb-8 mt-4">
-          <div className="relative">
+          <div className="relative inline-block">
             <span 
               className="text-7xl md:text-8xl font-bold text-[#002E6E] tracking-tight"
-              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              style={{ fontFamily: 'Cambria, Georgia, serif' }}
               data-testid="text-current-time"
             >
               {formatTime(time)}
             </span>
-            <span className="absolute -top-2 -right-12 md:-right-16 text-lg md:text-xl font-semibold text-[#002E6E]/70" data-testid="text-ampm">
-              {getAmPm(time)}
+            <span 
+              className="absolute -top-1 -right-14 md:-right-16 text-base md:text-lg font-semibold text-[#002E6E]/70"
+              style={{ fontFamily: 'Cambria, Georgia, serif' }}
+              data-testid="text-ampm"
+            >
+              {getDayName(time)}
             </span>
           </div>
-          <p className="text-lg md:text-xl text-[#002E6E]/60 mt-2 font-medium" data-testid="text-day-name">
-            {getDayName(time)}
-          </p>
         </div>
 
-        <div className="w-full max-w-sm space-y-6 pb-8">
-          {cards.map((card) => (
-            <Link key={card.href} href={card.href} data-testid={`link-${card.href.slice(1)}`}>
-              <div 
-                className="bg-white rounded-2xl py-6 px-4 shadow-md border border-slate-100 hover:shadow-lg transition-all duration-300 cursor-pointer group text-center"
-                data-testid={`card-${card.href.slice(1)}`}
-              >
-                <div className="flex justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <AlarmClockIcon />
+        <div className="w-full max-w-sm space-y-5 pb-8">
+          {cards.map((card) => {
+            const IconComponent = card.icon;
+            return (
+              <Link key={card.href} href={card.href} data-testid={`link-${card.href.slice(1)}`}>
+                <div 
+                  className="bg-white rounded-2xl py-5 px-4 shadow-md border border-slate-100 hover:shadow-lg transition-all duration-300 cursor-pointer group text-center"
+                  data-testid={`card-${card.href.slice(1)}`}
+                >
+                  <div className="flex justify-center mb-2 group-hover:scale-105 transition-transform">
+                    <IconComponent />
+                  </div>
+                  <h2 className="text-lg font-bold text-[#002E6E] italic">
+                    {card.title}
+                  </h2>
                 </div>
-                <h2 className="text-lg font-bold text-[#002E6E] italic">
-                  {card.title}
-                </h2>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>
