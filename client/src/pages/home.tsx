@@ -176,7 +176,10 @@ export default function Home() {
     return `${h.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  const getAmPm = (date: Date) => date.getHours() >= 12 ? 'PM' : 'AM';
+  const getDayNight = (date: Date) => {
+    const hours = date.getHours();
+    return (hours >= 6 && hours < 18) ? 'Day' : 'Night';
+  };
 
   const getDayName = (date: Date) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -204,7 +207,7 @@ export default function Home() {
 
       <div className="flex-1 flex flex-col items-center px-4">
         <div className="text-center mb-8 mt-4">
-          <div className="relative inline-block">
+          <div className="flex items-baseline justify-center gap-3">
             <span 
               className="text-7xl md:text-8xl font-bold text-[#002E6E] tracking-tight"
               style={{ fontFamily: 'Cambria, Georgia, serif' }}
@@ -213,13 +216,20 @@ export default function Home() {
               {formatTime(time)}
             </span>
             <span 
-              className="absolute -top-1 -right-14 md:-right-16 text-base md:text-lg font-semibold text-[#002E6E]/70"
+              className="text-xl md:text-2xl font-semibold text-[#00BAF2]"
               style={{ fontFamily: 'Cambria, Georgia, serif' }}
-              data-testid="text-ampm"
+              data-testid="text-daynight"
             >
-              {getDayName(time)}
+              {getDayNight(time)}
             </span>
           </div>
+          <p 
+            className="text-lg text-[#002E6E]/60 mt-1"
+            style={{ fontFamily: 'Cambria, Georgia, serif' }}
+            data-testid="text-day-name"
+          >
+            {getDayName(time)}
+          </p>
         </div>
 
         <div className="w-full max-w-sm flex flex-col gap-6 pb-8">
