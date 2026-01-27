@@ -66,9 +66,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-serif">
+    <div className="h-screen bg-slate-50 flex font-serif overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-72 flex-col fixed h-full z-20 royal-gradient shadow-2xl">
+      <aside className="hidden lg:flex w-72 flex-col royal-gradient shadow-2xl">
         <NavContent />
       </aside>
 
@@ -91,7 +91,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main 
-        className="flex-1 lg:ml-72 p-4 md:p-8 pt-20 lg:pt-8 overflow-y-auto"
+        className="flex-1 h-full overflow-y-auto p-4 md:p-8 pt-20 lg:pt-8"
         onClick={() => {
           // Unlock audio/speech on first user interaction
           if (!window.speechSynthesis.speaking) {
