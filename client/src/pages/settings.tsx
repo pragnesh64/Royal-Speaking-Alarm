@@ -1,5 +1,6 @@
 import Layout from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/hooks/use-translations";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMutation } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ const LANGUAGES = [
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const t = useTranslations();
 
   const mutation = useMutation({
     mutationFn: async (language: string) => {
@@ -41,8 +43,8 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Settings Updated",
-        description: "Your language preference has been saved.",
+        title: t.success,
+        description: t.settingsSaved,
       });
     },
   });
@@ -50,8 +52,8 @@ export default function SettingsPage() {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-[#002E6E] mb-2">Settings</h1>
-        <p className="text-slate-500 text-lg">Manage your global preferences.</p>
+        <h1 className="text-4xl font-bold text-[#002E6E] mb-2">{t.settings}</h1>
+        <p className="text-slate-500 text-lg">{t.chooseLanguage}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -63,14 +65,14 @@ export default function SettingsPage() {
                 <Globe className="w-5 h-5 text-[#00BAF2]" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#002E6E]">Global Language</h3>
-                <p className="text-sm text-slate-400 font-serif italic">Choose your preferred language</p>
+                <h3 className="text-xl font-bold text-[#002E6E]">{t.globalLanguage}</h3>
+                <p className="text-sm text-slate-400 font-serif italic">{t.chooseLanguage}</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>App Language</Label>
+                <Label>{t.appLanguage}</Label>
                 <Select 
                   value={user?.language || "english"} 
                   onValueChange={(val) => mutation.mutate(val)}
@@ -88,7 +90,7 @@ export default function SettingsPage() {
                 {mutation.isPending && (
                   <div className="flex items-center gap-2 text-[#00BAF2] text-sm font-serif italic mt-2">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    Saving preference...
+                    {t.loading}
                   </div>
                 )}
               </div>
@@ -104,37 +106,37 @@ export default function SettingsPage() {
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-2">
                 <Crown className="w-8 h-8 text-yellow-400" />
-                <h3 className="text-2xl font-bold tracking-wide italic">Premium Plan</h3>
+                <h3 className="text-2xl font-bold tracking-wide italic">{t.premium}</h3>
               </div>
-              <p className="text-blue-200 mb-8">Unlock unlimited alarms and family voice sharing.</p>
+              <p className="text-blue-200 mb-8">{t.subscription}</p>
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
                     <Check className="w-4 h-4 text-[#00BAF2]" />
                   </div>
-                  <span>Unlimited Speaking Alarms</span>
+                  <span>{t.speaking}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
                     <Check className="w-4 h-4 text-[#00BAF2]" />
                   </div>
-                  <span>Medicine Photo Library</span>
+                  <span>{t.myMedicines}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
                     <Check className="w-4 h-4 text-[#00BAF2]" />
                   </div>
-                  <span>Family Voice Sharing</span>
+                  <span>{t.myVoice}</span>
                 </div>
               </div>
 
               <div className="bg-white/10 rounded-xl p-4 flex justify-between items-center mb-6 border border-white/5">
                 <div>
-                  <p className="text-sm text-blue-200">Current Plan</p>
-                  <p className="font-bold text-lg">{user?.subscriptionStatus === 'active' ? 'Premium' : '30 Days Free Trial'}</p>
+                  <p className="text-sm text-blue-200">{t.currentPlan}</p>
+                  <p className="font-bold text-lg">{user?.subscriptionStatus === 'active' ? t.premium : t.free}</p>
                 </div>
-                <span className="text-[#00BAF2] bg-[#00BAF2]/10 px-3 py-1 rounded-full text-sm font-bold border border-[#00BAF2]/20">Active</span>
+                <span className="text-[#00BAF2] bg-[#00BAF2]/10 px-3 py-1 rounded-full text-sm font-bold border border-[#00BAF2]/20">{t.active}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

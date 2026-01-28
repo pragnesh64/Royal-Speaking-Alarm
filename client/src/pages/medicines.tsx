@@ -4,10 +4,12 @@ import { useMedicines, useDeleteMedicine } from "@/hooks/use-medicines";
 import { Trash2, Pill, Loader2, Clock, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function Medicines() {
   const { data: medicines, isLoading } = useMedicines();
   const deleteMedicine = useDeleteMedicine();
+  const t = useTranslations();
 
   if (isLoading) {
     return (
@@ -23,8 +25,8 @@ export default function Medicines() {
     <Layout>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-[#002E6E] mb-2">My Medicines</h1>
-          <p className="text-slate-500 text-lg">Keep track of your health and doses.</p>
+          <h1 className="text-4xl font-bold text-[#002E6E] mb-2">{t.myMedicines}</h1>
+          <p className="text-slate-500 text-lg">{t.dosage}</p>
         </div>
         <MedicineModal />
       </div>
@@ -34,8 +36,8 @@ export default function Medicines() {
           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
             <Pill className="w-10 h-10 text-blue-300" />
           </div>
-          <h3 className="text-xl font-bold text-[#002E6E] mb-2">No Medicines Added</h3>
-          <p className="text-slate-500 mb-6 max-w-sm mx-auto">Add your medications and we'll remind you to take them on time.</p>
+          <h3 className="text-xl font-bold text-[#002E6E] mb-2">{t.noMedicines}</h3>
+          <p className="text-slate-500 mb-6 max-w-sm mx-auto">{t.createFirstMedicine}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

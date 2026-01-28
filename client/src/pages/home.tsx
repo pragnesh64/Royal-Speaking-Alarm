@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 
 const RoutineIcon = () => (
   <svg viewBox="0 0 120 120" className="w-24 h-24">
@@ -163,6 +164,7 @@ const MeetingIcon = () => (
 
 export default function Home() {
   const [time, setTime] = useState(new Date());
+  const t = useTranslations();
   
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -178,18 +180,18 @@ export default function Home() {
 
   const getDayNight = (date: Date) => {
     const hours = date.getHours();
-    return (hours >= 6 && hours < 18) ? 'Day' : 'Night';
+    return (hours >= 6 && hours < 18) ? t.day : t.night;
   };
 
   const getDayName = (date: Date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
     return days[date.getDay()];
   };
 
   const cards = [
-    { href: "/routine", title: "Set Your Routine", icon: RoutineIcon },
-    { href: "/medicines", title: "Set Your Medicine", icon: MedicineIcon },
-    { href: "/meetings", title: "Set Your Meeting", icon: MeetingIcon }
+    { href: "/routine", title: t.myRoutine, icon: RoutineIcon },
+    { href: "/medicines", title: t.myMedicines, icon: MedicineIcon },
+    { href: "/meetings", title: t.myMeetings, icon: MeetingIcon }
   ];
 
   return (

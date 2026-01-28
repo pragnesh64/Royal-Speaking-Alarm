@@ -10,6 +10,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslations } from "@/hooks/use-translations";
 
 interface Meeting {
   id: number;
@@ -27,6 +28,7 @@ export default function Meetings() {
   const [open, setOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
   const { toast } = useToast();
+  const t = useTranslations();
 
   const { data: meetings = [], isLoading } = useQuery<Meeting[]>({
     queryKey: ['/api/meetings']
@@ -114,7 +116,7 @@ export default function Meetings() {
   const formatTimeTo12Hour = (time24: string) => {
     const [hours, minutes] = time24.split(':');
     const h = parseInt(hours);
-    const dayNight = (h >= 6 && h < 18) ? 'Day' : 'Night';
+    const dayNight = (h >= 6 && h < 18) ? t.day : t.night;
     const h12 = h % 12 || 12;
     return `${h12}:${minutes} ${dayNight}`;
   };
@@ -130,8 +132,8 @@ export default function Meetings() {
       <div className="space-y-6 h-full overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-[#002E6E] italic">My Meetings</h1>
-            <p className="text-slate-500">Schedule and manage your meetings</p>
+            <h1 className="text-3xl font-bold text-[#002E6E] italic">{t.myMeetings}</h1>
+            <p className="text-slate-500">{t.newMeeting}</p>
           </div>
           <Dialog open={open} onOpenChange={(isOpen) => {
             setOpen(isOpen);
@@ -142,18 +144,18 @@ export default function Meetings() {
                 className="rounded-xl bg-[#002E6E] hover:bg-[#002E6E]/90 text-white shadow-lg gap-2"
                 data-testid="button-add-meeting"
               >
-                <Plus className="w-5 h-5" /> Add Meeting
+                <Plus className="w-5 h-5" /> {t.newMeeting}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold text-[#002E6E] italic">
-                  {editingMeeting ? "Edit Meeting" : "Schedule Meeting"}
+                  {editingMeeting ? t.editMeeting : t.newMeeting}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Meeting Title</Label>
+                  <Label>{t.meetingTitle}</Label>
                   <Input
                     value={formData.title}
                     onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -256,8 +258,8 @@ export default function Meetings() {
         ) : sortedMeetings.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-slate-100">
             <Users className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-            <h3 className="text-xl font-semibold text-slate-600 mb-2">No Meetings Scheduled</h3>
-            <p className="text-slate-400">Click "Add Meeting" to schedule your first meeting</p>
+            <h3 className="text-xl font-semibold text-slate-600 mb-2">{t.noMeetings}</h3>
+            <p className="text-slate-400">{t.createFirstMeeting}</p>
           </div>
         ) : (
           <div className="grid gap-4">

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/hooks/use-translations";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ActiveAlarmData {
@@ -21,6 +22,7 @@ interface ActiveAlarmData {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const t = useTranslations();
   const { data: alarms, isLoading: alarmsLoading } = useAlarms();
   const { data: medicines, isLoading: medsLoading } = useMedicines();
   const deleteAlarm = useDeleteAlarm();
@@ -35,7 +37,7 @@ export default function Dashboard() {
   const formatTimeTo12Hour = (time24: string) => {
     const [hours, minutes] = time24.split(':');
     const h = parseInt(hours);
-    const dayNight = (h >= 6 && h < 18) ? 'Day' : 'Night';
+    const dayNight = (h >= 6 && h < 18) ? t.day : t.night;
     const hour12 = h % 12 || 12;
     return `${hour12}:${minutes} ${dayNight}`;
   };

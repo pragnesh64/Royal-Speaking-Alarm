@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Bell, Pill, Settings, LogOut, Menu, X, Home, Users } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -9,13 +10,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const t = useTranslations();
 
   const navItems = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/routine", label: "My Routine", icon: Bell },
-    { href: "/medicines", label: "My Medicines", icon: Pill },
-    { href: "/meetings", label: "My Meetings", icon: Users },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/", label: t.home, icon: Home },
+    { href: "/routine", label: t.myRoutine, icon: Bell },
+    { href: "/medicines", label: t.myMedicines, icon: Pill },
+    { href: "/meetings", label: t.myMeetings, icon: Users },
+    { href: "/settings", label: t.settings, icon: Settings },
   ];
 
   const NavContent = () => (
@@ -50,10 +52,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="p-4 mt-auto">
         <div className="bg-[#00204d] rounded-xl p-4 mb-4 border border-white/5">
-          <p className="text-xs text-blue-200 uppercase tracking-wider mb-1">Current Plan</p>
+          <p className="text-xs text-blue-200 uppercase tracking-wider mb-1">{t.currentPlan}</p>
           <div className="flex justify-between items-center">
-             <span className="text-white font-bold">{user?.subscriptionStatus === 'active' ? 'Premium' : 'Free Trial'}</span>
-             <span className="text-[#00BAF2] text-xs font-bold px-2 py-0.5 bg-[#00BAF2]/10 rounded-full border border-[#00BAF2]/20">Active</span>
+             <span className="text-white font-bold">{user?.subscriptionStatus === 'active' ? t.premium : t.free}</span>
+             <span className="text-[#00BAF2] text-xs font-bold px-2 py-0.5 bg-[#00BAF2]/10 rounded-full border border-[#00BAF2]/20">{t.active}</span>
           </div>
         </div>
         <button 
@@ -61,7 +63,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           className="w-full flex items-center justify-center gap-2 text-red-300 hover:text-red-200 hover:bg-red-500/10 py-2 rounded-lg transition-colors"
         >
           <LogOut className="w-4 h-4" />
-          <span>Sign Out</span>
+          <span>{t.close}</span>
         </button>
       </div>
     </>

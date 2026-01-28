@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslations } from "@/hooks/use-translations";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ActiveAlarmData {
@@ -21,6 +22,7 @@ interface ActiveAlarmData {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const t = useTranslations();
   const { data: alarms, isLoading: alarmsLoading } = useAlarms();
   const { data: medicines, isLoading: medsLoading } = useMedicines();
   const deleteAlarm = useDeleteAlarm();
@@ -35,7 +37,7 @@ export default function Dashboard() {
   const formatTimeTo12Hour = (time24: string) => {
     const [hours, minutes] = time24.split(':');
     const h = parseInt(hours);
-    const dayNight = (h >= 6 && h < 18) ? 'Day' : 'Night';
+    const dayNight = (h >= 6 && h < 18) ? t.day : t.night;
     const hour12 = h % 12 || 12;
     return `${hour12}:${minutes} ${dayNight}`;
   };
@@ -333,8 +335,8 @@ export default function Dashboard() {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-[#002E6E] mb-2 italic">My Routine</h1>
-          <p className="text-slate-500 text-lg">Manage your daily reminders and voices.</p>
+          <h1 className="text-4xl font-bold text-[#002E6E] mb-2 italic">{t.myRoutine}</h1>
+          <p className="text-slate-500 text-lg">{t.newAlarm}</p>
         </div>
         <AlarmModal />
       </div>
@@ -344,8 +346,8 @@ export default function Dashboard() {
           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
             <Mic className="w-10 h-10 text-blue-300" />
           </div>
-          <h3 className="text-xl font-bold text-[#002E6E] mb-2">No Routine Set</h3>
-          <p className="text-slate-500 mb-6 max-w-sm mx-auto">Create your first speaking alarm. You can even record your mom's voice!</p>
+          <h3 className="text-xl font-bold text-[#002E6E] mb-2">{t.noAlarms}</h3>
+          <p className="text-slate-500 mb-6 max-w-sm mx-auto">{t.createFirstAlarm}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
