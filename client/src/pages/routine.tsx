@@ -29,6 +29,8 @@ export default function Dashboard() {
   const updateAlarm = useUpdateAlarm();
   const [activeAlarms, setActiveAlarms] = useState<Set<number>>(new Set());
   const [activeMeds, setActiveMeds] = useState<Set<number>>(new Set());
+  const [dismissedAlarms, setDismissedAlarms] = useState<Map<number, string>>(new Map());
+  const [dismissedMeds, setDismissedMeds] = useState<Map<number, string>>(new Map());
   const [activeAlarmPopup, setActiveAlarmPopup] = useState<ActiveAlarmData | null>(null);
   const [snoozeTimeout, setSnoozeTimeout] = useState<NodeJS.Timeout | null>(null);
   const vibrateIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -61,41 +63,62 @@ export default function Dashboard() {
         const isTimeMatch = alarm.time === currentTime;
         const isDayMatch = alarm.days?.includes(currentDay);
         const isDateMatch = alarm.date === currentDate;
+        const wasDismissedThisMinute = dismissedAlarms.get(alarm.id) === currentTime;
 
         if (isTimeMatch && (isDayMatch || isDateMatch || (!alarm.days?.length && !alarm.date))) {
-          if (!activeAlarms.has(alarm.id)) {
+          if (!activeAlarms.has(alarm.id) && !wasDismissedThisMinute) {
             triggerAlarm(alarm, 'alarm');
             setActiveAlarms(prev => new Set(prev).add(alarm.id));
             if (isDateMatch) updateAlarm.mutate({ id: alarm.id, isActive: false });
           }
-        } else if (activeAlarms.has(alarm.id) && !activeAlarmPopup) {
-          setActiveAlarms(prev => {
-            const next = new Set(prev);
-            next.delete(alarm.id);
-            return next;
-          });
+        } else {
+          if (activeAlarms.has(alarm.id) && !activeAlarmPopup) {
+            setActiveAlarms(prev => {
+              const next = new Set(prev);
+              next.delete(alarm.id);
+              return next;
+            });
+          }
+          if (dismissedAlarms.has(alarm.id) && dismissedAlarms.get(alarm.id) !== currentTime) {
+            setDismissedAlarms(prev => {
+              const next = new Map(prev);
+              next.delete(alarm.id);
+              return next;
+            });
+          }
         }
       });
 
       medicines?.forEach(med => {
         const isTimeMatch = med.times?.includes(currentTime);
+        const wasDismissedThisMinute = dismissedMeds.get(med.id) === currentTime;
+        
         if (isTimeMatch) {
-          if (!activeMeds.has(med.id)) {
+          if (!activeMeds.has(med.id) && !wasDismissedThisMinute) {
             triggerAlarm(med, 'medicine');
             setActiveMeds(prev => new Set(prev).add(med.id));
           }
-        } else if (activeMeds.has(med.id) && !activeAlarmPopup) {
-          setActiveMeds(prev => {
-            const next = new Set(prev);
-            next.delete(med.id);
-            return next;
-          });
+        } else {
+          if (activeMeds.has(med.id) && !activeAlarmPopup) {
+            setActiveMeds(prev => {
+              const next = new Set(prev);
+              next.delete(med.id);
+              return next;
+            });
+          }
+          if (dismissedMeds.has(med.id) && dismissedMeds.get(med.id) !== currentTime) {
+            setDismissedMeds(prev => {
+              const next = new Map(prev);
+              next.delete(med.id);
+              return next;
+            });
+          }
         }
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [alarms, medicines, activeAlarms, activeMeds, activeAlarmPopup]);
+  }, [alarms, medicines, activeAlarms, activeMeds, activeAlarmPopup, dismissedAlarms, dismissedMeds]);
 
   const triggerAlarm = (item: any, type: 'alarm' | 'medicine') => {
     console.log(`Triggering ${type}:`, item.id);
@@ -208,16 +231,28 @@ export default function Dashboard() {
         activeAlarmPopup.audio.src = "";
       }
       
+      const currentTime = format(new Date(), "HH:mm");
+      
       if (activeAlarmPopup.type === 'alarm') {
         setActiveAlarms(prev => {
           const next = new Set(prev);
           next.delete(activeAlarmPopup.id);
           return next;
         });
+        setDismissedAlarms(prev => {
+          const next = new Map(prev);
+          next.set(activeAlarmPopup.id, currentTime);
+          return next;
+        });
       } else {
         setActiveMeds(prev => {
           const next = new Set(prev);
           next.delete(activeAlarmPopup.id);
+          return next;
+        });
+        setDismissedMeds(prev => {
+          const next = new Map(prev);
+          next.set(activeAlarmPopup.id, currentTime);
           return next;
         });
       }
