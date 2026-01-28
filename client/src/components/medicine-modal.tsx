@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pill, Plus, Loader2, Camera, Image as ImageIcon, X } from "lucide-react";
+import { Pill, Plus, Loader2, Camera, Image as ImageIcon, X, Volume2, Mic, Music, Vibrate } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useCreateMedicine, useUpdateMedicine } from "@/hooks/use-medicines";
 import { useUpload } from "@/hooks/use-upload";
@@ -222,19 +222,27 @@ export function MedicineModal({ medicine, trigger }: MedicineModalProps) {
               <RadioGroup 
                 value={formData.type} 
                 onValueChange={val => setFormData({ ...formData, type: val })}
-                className="grid grid-cols-3 gap-3"
+                className="grid grid-cols-2 gap-3"
               >
                 <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-colors has-[:checked]:bg-blue-50 has-[:checked]:border-[#00BAF2]">
                   <RadioGroupItem value="speaking" id="med-speaking" />
+                  <Volume2 className="w-4 h-4 text-[#00BAF2]" />
                   <Label htmlFor="med-speaking" className="cursor-pointer text-xs">Speaking</Label>
                 </div>
                 <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-colors has-[:checked]:bg-blue-50 has-[:checked]:border-[#00BAF2]">
                   <RadioGroupItem value="custom_voice" id="med-custom" />
+                  <Mic className="w-4 h-4 text-[#00BAF2]" />
                   <Label htmlFor="med-custom" className="cursor-pointer text-xs">My Voice</Label>
                 </div>
                 <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-colors has-[:checked]:bg-blue-50 has-[:checked]:border-[#00BAF2]">
-                  <RadioGroupItem value="text" id="med-text" />
-                  <Label htmlFor="med-text" className="cursor-pointer text-xs">Text Msg</Label>
+                  <RadioGroupItem value="music" id="med-music" />
+                  <Music className="w-4 h-4 text-[#00BAF2]" />
+                  <Label htmlFor="med-music" className="cursor-pointer text-xs">Music</Label>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-colors has-[:checked]:bg-blue-50 has-[:checked]:border-[#00BAF2]">
+                  <RadioGroupItem value="vibration" id="med-vibration" />
+                  <Vibrate className="w-4 h-4 text-[#00BAF2]" />
+                  <Label htmlFor="med-vibration" className="cursor-pointer text-xs">Vibration</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -253,14 +261,14 @@ export function MedicineModal({ medicine, trigger }: MedicineModalProps) {
               />
             )}
 
-            {(formData.type === "speaking" || formData.type === "text") && (
+            {formData.type === "speaking" && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                 <div className="space-y-2">
                   <Label>Message to Speak</Label>
                   <Input 
                     value={formData.textToSpeak || ""}
                     onChange={e => setFormData({ ...formData, textToSpeak: e.target.value })}
-                    placeholder={formData.type === "text" ? "Take your medicine..." : "Time for medicine..."}
+                    placeholder="Time for medicine..."
                     className="royal-input"
                   />
                 </div>
@@ -279,6 +287,64 @@ export function MedicineModal({ medicine, trigger }: MedicineModalProps) {
                       <SelectItem value="male">Male</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            )}
+
+            {formData.type === "music" && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-2">
+                  <Label>Upload Music File</Label>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full royal-input h-10 gap-2 border-dashed"
+                    onClick={() => document.getElementById('med-music-input')?.click()}
+                  >
+                    <Music className="w-4 h-4" /> Choose Audio File
+                  </Button>
+                  <input 
+                    id="med-music-input" 
+                    type="file" 
+                    accept="audio/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onloadend = () => {
+                          setFormData(prev => ({ ...prev, voiceUrl: reader.result as string }));
+                        };
+                      }
+                    }}
+                  />
+                  {formData.voiceUrl && formData.type === "music" && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                      <Music className="w-4 h-4 text-[#00BAF2]" />
+                      <span className="text-sm text-slate-600">Audio file selected</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-6 w-6"
+                        onClick={() => setFormData(prev => ({ ...prev, voiceUrl: "" }))}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {formData.type === "vibration" && (
+              <div className="p-4 bg-blue-50 rounded-lg animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3">
+                  <Vibrate className="w-6 h-6 text-[#00BAF2]" />
+                  <p className="text-sm text-slate-600">
+                    Your device will vibrate when this medicine reminder triggers.
+                  </p>
                 </div>
               </div>
             )}
