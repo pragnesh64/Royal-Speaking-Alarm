@@ -30,6 +30,9 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status").default("trial"),
   trialEndsAt: timestamp("trial_ends_at").defaultNow(),
   language: text("language").default("english"),
+  // Stripe fields for payment
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
 });
 
 // OTP storage for phone verification

@@ -6,6 +6,9 @@ import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { seed } from "./seed";
 import bcrypt from "bcryptjs";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { sql } from "drizzle-orm";
+import { db } from "./db";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -371,6 +374,135 @@ export async function registerRoutes(
       }
       console.error("Verify OTP error:", err);
       res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  // Stripe Payment Routes
+  app.get("/api/stripe/publishable-key", async (req, res) => {
+    try {
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (error) {
+      console.error("Error getting publishable key:", error);
+      res.status(500).json({ message: "Stripe not configured" });
+    }
+  });
+
+  app.get("/api/stripe/products", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          p.id as product_id,
+          p.name as product_name,
+          p.description,
+          pr.id as price_id,
+          pr.unit_amount,
+          pr.currency,
+          pr.recurring
+        FROM stripe.products p
+        LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
+        WHERE p.active = true
+        ORDER BY pr.unit_amount ASC
+      `);
+      res.json({ products: result.rows });
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/stripe/checkout", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { priceId } = req.body;
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const stripe = await getUncachableStripeClient();
+      
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: { userId: user.id }
+        });
+        customerId = customer.id;
+        
+        await db.execute(sql`
+          UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${userId}
+        `);
+      }
+      
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: `${req.protocol}://${req.get('host')}/settings?payment=success`,
+        cancel_url: `${req.protocol}://${req.get('host')}/settings?payment=cancelled`,
+        subscription_data: {
+          trial_period_days: 30
+        }
+      });
+      
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      res.status(500).json({ message: error.message || "Checkout failed" });
+    }
+  });
+
+  app.get("/api/stripe/subscription", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeSubscriptionId) {
+        return res.json({ subscription: null, status: user?.subscriptionStatus || 'trial' });
+      }
+      
+      const result = await db.execute(sql`
+        SELECT * FROM stripe.subscriptions WHERE id = ${user.stripeSubscriptionId}
+      `);
+      
+      res.json({ 
+        subscription: result.rows[0] || null,
+        status: user.subscriptionStatus 
+      });
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post("/api/stripe/portal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No billing account found" });
+      }
+      
+      const stripe = await getUncachableStripeClient();
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.protocol}://${req.get('host')}/settings`
+      });
+      
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Portal error:", error);
+      res.status(500).json({ message: error.message || "Portal access failed" });
     }
   });
 
