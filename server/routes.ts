@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { seed } from "./seed";
+import bcrypt from "bcryptjs";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -178,6 +179,166 @@ export async function registerRoutes(
     // In a real app, use multer to save to disk or S3
     // Here we just return a mock URL
     res.json({ url: "https://placehold.co/400" });
+  });
+
+  // Helper to sanitize user response (exclude sensitive fields)
+  const sanitizeUser = (user: any) => {
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  };
+
+  // Validation schemas for auth
+  const signupSchema = z.object({
+    email: z.string().email("Invalid email format"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    name: z.string().optional()
+  });
+
+  const loginSchema = z.object({
+    email: z.string().email("Invalid email format"),
+    password: z.string().min(1, "Password is required")
+  });
+
+  const phoneSchema = z.object({
+    phone: z.string().min(10, "Invalid phone number")
+  });
+
+  const verifyOtpSchema = z.object({
+    phone: z.string().min(10, "Invalid phone number"),
+    otp: z.string().length(6, "OTP must be 6 digits"),
+    name: z.string().optional()
+  });
+
+  // Email/Password Authentication
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const validatedData = signupSchema.parse(req.body);
+      const { email, password, name } = validatedData;
+      
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+      
+      const passwordHash = await bcrypt.hash(password, 12);
+      const nameParts = (name || "").split(" ");
+      
+      const user = await storage.createEmailUser({
+        email,
+        passwordHash,
+        firstName: nameParts[0] || email.split("@")[0],
+        lastName: nameParts.slice(1).join(" ") || "",
+        authProvider: "email"
+      });
+      
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed after signup" });
+        }
+        res.json({ success: true, user: sanitizeUser(user) });
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Signup error:", err);
+      res.status(500).json({ message: "Signup failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const validatedData = loginSchema.parse(req.body);
+      const { email, password } = validatedData;
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!validPassword) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.json({ success: true, user: sanitizeUser(user) });
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Login error:", err);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Phone OTP Authentication (placeholder - requires Twilio setup)
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const validatedData = phoneSchema.parse(req.body);
+      const { phone } = validatedData;
+      
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      await storage.createOtp({ phone, code: otp, expiresAt });
+      
+      // TODO: Integrate Twilio to send SMS
+      // OTP logged only in development, removed from response for security
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[DEV] OTP for ${phone}: ${otp}`);
+      }
+      
+      res.json({ success: true, message: "OTP sent successfully" });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Send OTP error:", err);
+      res.status(500).json({ message: "Failed to send OTP" });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const validatedData = verifyOtpSchema.parse(req.body);
+      const { phone, otp, name } = validatedData;
+      
+      const validOtp = await storage.verifyOtp(phone, otp);
+      if (!validOtp) {
+        return res.status(401).json({ message: "Invalid or expired OTP" });
+      }
+      
+      // Find or create user by phone
+      let user = await storage.getUserByPhone(phone);
+      if (!user) {
+        const nameParts = (name || "").split(" ");
+        user = await storage.createPhoneUser({
+          phone,
+          firstName: nameParts[0] || phone.slice(-4),
+          lastName: nameParts.slice(1).join(" ") || "",
+          authProvider: "phone"
+        });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.json({ success: true, user: sanitizeUser(user) });
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("Verify OTP error:", err);
+      res.status(500).json({ message: "Verification failed" });
+    }
   });
 
   return httpServer;

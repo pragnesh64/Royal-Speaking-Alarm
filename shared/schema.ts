@@ -18,6 +18,9 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  phone: varchar("phone"),
+  passwordHash: varchar("password_hash"),
+  authProvider: varchar("auth_provider").default("email"), // email, google, phone
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -27,6 +30,16 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status").default("trial"),
   trialEndsAt: timestamp("trial_ends_at").defaultNow(),
   language: text("language").default("english"),
+});
+
+// OTP storage for phone verification
+export const otpCodes = pgTable("otp_codes", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone").notNull(),
+  code: varchar("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const alarms = pgTable("alarms", {

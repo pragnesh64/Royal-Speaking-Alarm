@@ -1,12 +1,12 @@
 import { db } from "./db";
 import {
-  users, alarms, medicines, meetings,
+  users, alarms, medicines, meetings, otpCodes,
   type User, type InsertUser,
   type Alarm, type InsertAlarm,
   type Medicine, type InsertMedicine,
   type Meeting, type InsertMeeting
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -118,6 +118,73 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMeeting(id: number): Promise<void> {
     await db.delete(meetings).where(eq(meetings.id, id));
+  }
+
+  // Auth methods
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.phone, phone));
+    return user;
+  }
+
+  async createEmailUser(data: { email: string; passwordHash: string; firstName: string; lastName: string; authProvider: string }): Promise<User> {
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days trial
+    const [user] = await db.insert(users).values({
+      email: data.email,
+      passwordHash: data.passwordHash,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      authProvider: data.authProvider,
+      subscriptionStatus: "trial",
+      trialEndsAt,
+    }).returning();
+    return user;
+  }
+
+  async createPhoneUser(data: { phone: string; firstName: string; lastName: string; authProvider: string }): Promise<User> {
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days trial
+    const [user] = await db.insert(users).values({
+      phone: data.phone,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      authProvider: data.authProvider,
+      subscriptionStatus: "trial",
+      trialEndsAt,
+    }).returning();
+    return user;
+  }
+
+  async createOtp(data: { phone: string; code: string; expiresAt: Date }): Promise<void> {
+    await db.insert(otpCodes).values({
+      phone: data.phone,
+      code: data.code,
+      expiresAt: data.expiresAt,
+    });
+  }
+
+  async verifyOtp(phone: string, code: string): Promise<boolean> {
+    const now = new Date();
+    const [otp] = await db
+      .select()
+      .from(otpCodes)
+      .where(
+        and(
+          eq(otpCodes.phone, phone),
+          eq(otpCodes.code, code),
+          eq(otpCodes.used, false),
+          gt(otpCodes.expiresAt, now)
+        )
+      );
+    
+    if (!otp) return false;
+    
+    // Mark OTP as used
+    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, otp.id));
+    return true;
   }
 }
 
