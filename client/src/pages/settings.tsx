@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink } from "lucide-react";
+import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 const LANGUAGES = [
@@ -315,6 +316,13 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      {/* Home Shortcut - Bottom Right */}
+      <Link href="/" data-testid="link-home-fab">
+        <div className="fixed bottom-6 right-6 w-14 h-14 royal-gradient rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105">
+          <Home className="w-6 h-6 text-white" />
+        </div>
+      </Link>
     </Layout>
   );
 }
