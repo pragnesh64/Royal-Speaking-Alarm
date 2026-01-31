@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslations } from "@/hooks/use-translations";
@@ -10,6 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 const LANGUAGES = [
   { label: "English", value: "english" },
@@ -90,14 +96,88 @@ export default function SettingsPage() {
   const yearlyPrice = productsData?.products?.find(p => p.recurring?.interval === 'year');
   
   const [clickedPlan, setClickedPlan] = useState<'monthly' | 'yearly' | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
-  const handleSubscribe = (priceId: string, plan: 'monthly' | 'yearly') => {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const { data: razorpayKey } = useQuery<{ key: string }>({
+    queryKey: ['/api/razorpay/key'],
+  });
+
+  const razorpayOrderMutation = useMutation({
+    mutationFn: async (plan: 'monthly' | 'yearly') => {
+      const res = await apiRequest("POST", "/api/razorpay/create-order", { plan });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (!razorpayLoaded || !razorpayKey?.key) {
+        toast({ title: "Error", description: "Payment system not ready", variant: "destructive" });
+        return;
+      }
+      
+      const options = {
+        key: razorpayKey.key,
+        amount: data.amount,
+        currency: data.currency,
+        name: "MyPA Premium",
+        description: data.plan === 'yearly' ? "Yearly Subscription" : "Monthly Subscription",
+        order_id: data.orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await apiRequest("POST", "/api/razorpay/verify-payment", {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              plan: data.plan
+            });
+            const result = await verifyRes.json();
+            if (result.success) {
+              toast({ title: "Success!", description: "Payment successful. Enjoy MyPA Premium!" });
+              queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+            }
+          } catch (err) {
+            toast({ title: "Error", description: "Payment verification failed", variant: "destructive" });
+          }
+        },
+        prefill: {
+          name: user?.firstName || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: "#002E6E"
+        },
+        modal: {
+          ondismiss: () => setClickedPlan(null)
+        }
+      };
+      
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+      setClickedPlan(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Could not start payment", variant: "destructive" });
+      setClickedPlan(null);
+    }
+  });
+
+  const handleSubscribe = (plan: 'monthly' | 'yearly') => {
     if (!user) {
       window.location.href = '/login';
       return;
     }
     setClickedPlan(plan);
-    checkoutMutation.mutate(priceId);
+    razorpayOrderMutation.mutate(plan);
   };
 
   return (
@@ -279,11 +359,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Button 
                     className="w-full bg-white text-[#002E6E] hover:bg-blue-50 font-bold h-11" 
-                    onClick={() => monthlyPrice && handleSubscribe(monthlyPrice.price_id, 'monthly')}
-                    disabled={checkoutMutation.isPending || !monthlyPrice}
+                    onClick={() => handleSubscribe('monthly')}
+                    disabled={razorpayOrderMutation.isPending || !razorpayLoaded}
                     data-testid="button-subscribe-monthly"
                   >
-                    {checkoutMutation.isPending && clickedPlan === 'monthly' ? (
+                    {razorpayOrderMutation.isPending && clickedPlan === 'monthly' ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <div className="flex justify-between items-center w-full">
@@ -294,12 +374,12 @@ export default function SettingsPage() {
                   </Button>
                   <Button 
                     className="w-full bg-gradient-to-r from-yellow-400 to-orange-400 text-[#002E6E] hover:from-yellow-500 hover:to-orange-500 font-bold h-11 relative overflow-hidden" 
-                    onClick={() => yearlyPrice && handleSubscribe(yearlyPrice.price_id, 'yearly')}
-                    disabled={checkoutMutation.isPending || !yearlyPrice}
+                    onClick={() => handleSubscribe('yearly')}
+                    disabled={razorpayOrderMutation.isPending || !razorpayLoaded}
                     data-testid="button-subscribe-yearly"
                   >
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-bl-lg font-bold">SAVE 31%</div>
-                    {checkoutMutation.isPending && clickedPlan === 'yearly' ? (
+                    {razorpayOrderMutation.isPending && clickedPlan === 'yearly' ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <div className="flex justify-between items-center w-full">

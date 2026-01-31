@@ -9,6 +9,8 @@ import bcrypt from "bcryptjs";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -503,6 +505,106 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Portal error:", error);
       res.status(500).json({ message: error.message || "Portal access failed" });
+    }
+  });
+
+  // Razorpay Integration
+  const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!
+  });
+
+  app.get("/api/razorpay/key", (req, res) => {
+    res.json({ key: process.env.RAZORPAY_KEY_ID });
+  });
+
+  app.post("/api/razorpay/create-order", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { plan } = req.body;
+      
+      if (plan !== 'monthly' && plan !== 'yearly') {
+        return res.status(400).json({ message: "Invalid plan. Use 'monthly' or 'yearly'" });
+      }
+      
+      const amount = plan === 'yearly' ? 36900 : 4500;
+      
+      const order = await razorpay.orders.create({
+        amount: amount,
+        currency: "INR",
+        receipt: `mypa_${Date.now()}`,
+        notes: {
+          userId: (req.user as any).id,
+          plan: plan
+        }
+      });
+      
+      res.json({
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        plan: plan
+      });
+    } catch (error: any) {
+      console.error("Razorpay order error:", error);
+      res.status(500).json({ message: error.message || "Failed to create order" });
+    }
+  });
+
+  app.post("/api/razorpay/verify-payment", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const userId = (req.user as any).id;
+      
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+        .update(body.toString())
+        .digest("hex");
+      
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ message: "Invalid payment signature" });
+      }
+      
+      const order = await razorpay.orders.fetch(razorpay_order_id);
+      const payment = await razorpay.payments.fetch(razorpay_payment_id);
+      
+      if (payment.status !== 'captured') {
+        return res.status(400).json({ message: "Payment not captured" });
+      }
+      
+      if (order.notes?.userId !== userId) {
+        return res.status(400).json({ message: "Order user mismatch" });
+      }
+      
+      const plan = order.amount === 36900 ? 'yearly' : 'monthly';
+      
+      const subscriptionEnd = new Date();
+      if (plan === 'yearly') {
+        subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+      } else {
+        subscriptionEnd.setDate(subscriptionEnd.getDate() + 30);
+      }
+      
+      await db.execute(sql`
+        UPDATE users 
+        SET subscription_status = 'active',
+            trial_ends_at = ${subscriptionEnd.toISOString()},
+            updated_at = NOW()
+        WHERE id = ${userId}
+      `);
+      
+      res.json({ 
+        success: true, 
+        message: "Payment verified successfully",
+        subscriptionEnd: subscriptionEnd.toISOString()
+      });
+    } catch (error: any) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({ message: error.message || "Payment verification failed" });
     }
   });
 
