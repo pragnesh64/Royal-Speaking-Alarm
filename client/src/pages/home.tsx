@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Settings } from "lucide-react";
 import { useTranslations } from "@/hooks/use-translations";
 
 const RoutineIcon = () => (
@@ -274,6 +274,13 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      {/* Settings Shortcut - Bottom Right */}
+      <Link href="/settings" data-testid="link-settings-fab">
+        <div className="fixed bottom-6 right-6 w-14 h-14 royal-gradient rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105">
+          <Settings className="w-6 h-6 text-white" />
+        </div>
+      </Link>
     </div>
   );
 }
