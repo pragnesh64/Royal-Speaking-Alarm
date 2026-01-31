@@ -205,7 +205,7 @@ export default function Home() {
               background: 'linear-gradient(135deg, #002E6E 0%, #00BAF2 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontFamily: 'Arial Black, Helvetica, sans-serif',
+              fontFamily: 'Cambria, Georgia, serif',
               letterSpacing: '-1px'
             }}
             data-testid="text-logo"
