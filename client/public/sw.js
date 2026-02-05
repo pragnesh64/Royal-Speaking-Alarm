@@ -61,7 +61,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || 'Time for your reminder!',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    badge: '/icons/icon-192x192.png',
     vibrate: [200, 100, 200, 100, 200, 100, 200],
     tag: 'mypa-alarm-' + (data.id || Date.now()),
     renotify: true,
@@ -74,8 +74,8 @@ self.addEventListener('push', (event) => {
       textToSpeak: data.textToSpeak
     },
     actions: [
-      { action: 'snooze', title: '5 min बाद' },
-      { action: 'dismiss', title: 'बंद करो' }
+      { action: 'snooze', title: 'Snooze 5 min' },
+      { action: 'dismiss', title: 'Dismiss' }
     ]
   };
   

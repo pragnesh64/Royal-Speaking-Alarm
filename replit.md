@@ -8,6 +8,18 @@ MyPA is a personal voice assistant Progressive Web App (PWA) for managing daily 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (February 2026)
+
+- **Push Notifications for Background Alarms**: Alarms now work even when app is closed
+  - Service Worker handles push notifications (`client/public/sw.js`)
+  - Server-side alarm scheduler checks every minute (`server/alarmScheduler.ts`)
+  - Web Push API integration with VAPID keys (`server/pushNotification.ts`)
+  - Notification settings toggle in Settings page
+- **Razorpay Payment Integration**: Replaced Stripe with Razorpay for Indian payments
+  - UPI, Cards, Netbanking, Wallets supported
+  - Test prices: ₹5/month, ₹6/year (Production: ₹45/₹369)
+  - UPI Intent for direct app opening on mobile
+
 ## Recent Changes (January 2026)
 
 - Rebranded app from "PA Alarm" to "MyPA"
@@ -18,9 +30,6 @@ Preferred communication style: Simple, everyday language.
 - Fixed alarm system with 12-hour time format (AM/PM)
 - Implemented active alarm popup with image display, TTS, and snooze functionality
 - Fixed image upload to use base64 encoding for unlimited size support
-- **Stripe Payment Integration**: Monthly (₹45) and Yearly (₹369) subscription plans with 30-day free trial
-- **Webhook Auto-Activation**: Subscription status automatically updates via Stripe webhooks
-- **Customer Portal**: Users can manage billing, update payment methods, and cancel subscriptions
 - **Trial Enforcement Flow**:
   - Day 1-14: Full access (active trial)
   - Day 15-24: Skippable premium popup appears on each page
@@ -63,6 +72,7 @@ Preferred communication style: Simple, everyday language.
   - `alarms` - Alarm configurations with voice/image support, recurring days, or specific dates
   - `medicines` - Medicine reminders with photo and dosage tracking
   - `meetings` - Meeting schedules with date, time, location, and participants
+  - `push_subscriptions` - Web Push notification subscriptions for background alarms
 - **Migrations**: Drizzle Kit with `db:push` command
 
 ### API Structure

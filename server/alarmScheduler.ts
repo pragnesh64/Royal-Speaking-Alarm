@@ -1,33 +1,65 @@
 import { db } from './db';
-import { alarms, medicines, meetings, users } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { alarms, medicines, meetings } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 import { sendPushNotification } from './pushNotification';
 
 let schedulerInterval: NodeJS.Timeout | null = null;
+let lastCheckedMinute: string = '';
 
-function getCurrentTimeIST(): { time: string; day: string; date: string } {
+function getCurrentTimeIST(): { time: string; day: string; date: string; minutes: number } {
+  // Use Intl.DateTimeFormat for reliable IST conversion
   const now = new Date();
-  // Convert to IST (UTC+5:30)
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istTime = new Date(now.getTime() + istOffset);
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  };
   
-  const hours = istTime.getUTCHours();
-  const minutes = istTime.getUTCMinutes();
-  const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  const formatter = new Intl.DateTimeFormat('en-IN', options);
+  const parts = formatter.formatToParts(now);
   
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const day = days[istTime.getUTCDay()];
+  const getValue = (type: string) => parts.find(p => p.type === type)?.value || '';
   
-  const year = istTime.getUTCFullYear();
-  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
-  const dateNum = istTime.getUTCDate().toString().padStart(2, '0');
+  const hours = getValue('hour').padStart(2, '0');
+  const minutes = getValue('minute').padStart(2, '0');
+  const time = `${hours}:${minutes}`;
+  
+  // Map weekday to short form
+  const weekdayMap: Record<string, string> = {
+    'Sun': 'Sun', 'Mon': 'Mon', 'Tue': 'Tue', 'Wed': 'Wed',
+    'Thu': 'Thu', 'Fri': 'Fri', 'Sat': 'Sat'
+  };
+  const day = weekdayMap[getValue('weekday')] || getValue('weekday');
+  
+  const year = getValue('year');
+  const month = getValue('month').padStart(2, '0');
+  const dateNum = getValue('day').padStart(2, '0');
   const date = `${year}-${month}-${dateNum}`;
   
-  return { time, day, date };
+  return { time, day, date, minutes: parseInt(minutes) };
+}
+
+function timeMatches(alarmTime: string, currentTime: string): boolean {
+  // Compare HH:mm format
+  const alarmHHMM = alarmTime.substring(0, 5);
+  return alarmHHMM === currentTime;
 }
 
 async function checkAndSendAlarms() {
   const { time, day, date } = getCurrentTimeIST();
+  
+  // Avoid checking same minute twice
+  const minuteKey = `${date}-${time}`;
+  if (minuteKey === lastCheckedMinute) {
+    return;
+  }
+  lastCheckedMinute = minuteKey;
+  
   console.log(`[Scheduler] Checking alarms at ${time} on ${day} (${date})`);
 
   try {
@@ -40,9 +72,7 @@ async function checkAndSendAlarms() {
     for (const alarm of activeAlarms) {
       let shouldTrigger = false;
 
-      // Check time match (compare just HH:mm)
-      const alarmTime = alarm.time.substring(0, 5); // Get HH:mm
-      if (alarmTime === time) {
+      if (timeMatches(alarm.time, time)) {
         // Check if specific date alarm
         if (alarm.date) {
           shouldTrigger = alarm.date === date;
@@ -51,7 +81,7 @@ async function checkAndSendAlarms() {
         else if (alarm.days && alarm.days.length > 0) {
           shouldTrigger = alarm.days.includes(day);
         }
-        // One-time alarm without date (shouldn't happen, but handle it)
+        // One-time alarm without date
         else {
           shouldTrigger = true;
         }
@@ -79,8 +109,7 @@ async function checkAndSendAlarms() {
     for (const medicine of activeMedicines) {
       if (medicine.times && medicine.times.length > 0) {
         for (const medTime of medicine.times) {
-          const medTimeHHMM = medTime.substring(0, 5);
-          if (medTimeHHMM === time) {
+          if (timeMatches(medTime, time)) {
             console.log(`[Scheduler] Triggering medicine ${medicine.id}: ${medicine.name}`);
             
             await sendPushNotification(medicine.userId, {
@@ -102,8 +131,7 @@ async function checkAndSendAlarms() {
       .where(eq(meetings.enabled, true));
 
     for (const meeting of activeMeetings) {
-      const meetingTime = meeting.time.substring(0, 5);
-      if (meetingTime === time && meeting.date === date) {
+      if (timeMatches(meeting.time, time) && meeting.date === date) {
         console.log(`[Scheduler] Triggering meeting ${meeting.id}: ${meeting.title}`);
         
         await sendPushNotification(meeting.userId, {
@@ -128,8 +156,8 @@ export function startAlarmScheduler() {
 
   console.log('[Scheduler] Starting alarm scheduler...');
   
-  // Check every minute
-  schedulerInterval = setInterval(checkAndSendAlarms, 60 * 1000);
+  // Check every 30 seconds for better accuracy
+  schedulerInterval = setInterval(checkAndSendAlarms, 30 * 1000);
   
   // Also run immediately
   checkAndSendAlarms();

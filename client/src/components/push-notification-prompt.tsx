@@ -6,7 +6,10 @@ import { Bell, BellOff, X } from 'lucide-react';
 
 export function PushNotificationPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    // Check if previously dismissed in this session
+    return sessionStorage.getItem('push-prompt-dismissed') === 'true';
+  });
   
   const { data: user } = useQuery<any>({
     queryKey: ['/api/auth/user'],
