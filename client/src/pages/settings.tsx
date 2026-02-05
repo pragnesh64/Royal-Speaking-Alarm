@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home, Bell, BellOff } from "lucide-react";
+import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home, Bell, BellOff, AlertTriangle, Smartphone } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -346,12 +346,62 @@ export default function SettingsPage() {
                     Test Notification
                   </Button>
                 )}
+
+                {/* Battery Optimization Warning */}
+                {isSubscribed && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-semibold text-amber-800 mb-1">Screen Off पर Alarm के लिए:</p>
+                        <ul className="text-amber-700 space-y-1 list-disc list-inside">
+                          <li>Settings → Apps → MyPA → Battery → "Don't optimize" select करें</li>
+                          <li>या Settings → Battery → Battery optimization → MyPA → "Don't optimize"</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
                 Push notifications are not supported in this browser.
               </p>
             )}
+          </div>
+
+          {/* Important Instructions for Screen-Off Alarms */}
+          <div className="royal-card p-4 mt-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-purple-50 rounded-full flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#002E6E]">Screen Off Alarms</h3>
+                <p className="text-xs text-slate-400 font-serif italic">Phone बंद होने पर alarm चलाने के लिए</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                <p className="font-semibold text-blue-800 mb-2">Step 1: App Install करें</p>
+                <p className="text-blue-700 text-xs">Browser में "Add to Home Screen" या "Install App" पर click करें। PWA install होने के बाद alarms better काम करते हैं।</p>
+              </div>
+
+              <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                <p className="font-semibold text-green-800 mb-2">Step 2: Battery Optimization बंद करें</p>
+                <p className="text-green-700 text-xs">
+                  <strong>Samsung:</strong> Settings → Apps → MyPA → Battery → Unrestricted<br/>
+                  <strong>Xiaomi:</strong> Settings → Apps → MyPA → Battery saver → No restrictions<br/>
+                  <strong>Other:</strong> Settings → Battery → Battery optimization → MyPA → Don't optimize
+                </p>
+              </div>
+
+              <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
+                <p className="font-semibold text-orange-800 mb-2">Step 3: Auto-Start Enable करें (Xiaomi/Oppo/Vivo)</p>
+                <p className="text-orange-700 text-xs">Settings → Apps → MyPA → Autostart → Enable करें। यह app को background में run करने देता है।</p>
+              </div>
+            </div>
           </div>
         </section>
 

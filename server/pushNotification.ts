@@ -59,7 +59,14 @@ export async function sendPushNotification(
             auth: sub.auth
           }
         },
-        JSON.stringify(payload)
+        JSON.stringify(payload),
+        {
+          TTL: 60,
+          urgency: 'high',
+          headers: {
+            'Urgency': 'high'
+          }
+        }
       );
       success++;
       console.log(`[Push] Notification sent to user ${userId}`);
