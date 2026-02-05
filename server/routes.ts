@@ -723,7 +723,7 @@ export async function registerRoutes(
         type: "alarm"
       });
       
-      res.json({ success: true, ...result });
+      res.json({ sent: result.success, failed: result.failed });
     } catch (error: any) {
       console.error("Push test error:", error);
       res.status(500).json({ message: error.message });

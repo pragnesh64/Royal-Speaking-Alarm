@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home } from "lucide-react";
+import { Loader2, Globe, Check, Crown, LogOut, User, ExternalLink, Home, Bell, BellOff } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { Switch } from "@/components/ui/switch";
 
 declare global {
   interface Window {
@@ -42,6 +44,8 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const t = useTranslations();
+  const { isSupported, isSubscribed, permission, subscribe, unsubscribe, testNotification } = usePushNotifications();
+  const [notifLoading, setNotifLoading] = useState(false);
 
   const { data: productsData } = useQuery<{ products: { price_id: string; unit_amount: number; recurring: { interval: string } }[] }>({
     queryKey: ["/api/stripe/products"],
@@ -263,6 +267,91 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Notification Settings */}
+          <div className="royal-card p-4 mt-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-orange-50 rounded-full flex items-center justify-center">
+                <Bell className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#002E6E]">Alarm Notifications</h3>
+                <p className="text-xs text-slate-400 font-serif italic">App बंद होने पर भी alarm बजेगा</p>
+              </div>
+            </div>
+
+            {isSupported ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    {isSubscribed ? (
+                      <Bell className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <BellOff className="w-4 h-4 text-slate-400" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {isSubscribed ? 'Notifications On' : 'Notifications Off'}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={isSubscribed}
+                    disabled={notifLoading || permission === 'denied'}
+                    onCheckedChange={async (checked) => {
+                      setNotifLoading(true);
+                      try {
+                        if (checked) {
+                          const success = await subscribe();
+                          if (success) {
+                            toast({ title: "Success", description: "Alarm notifications enabled!" });
+                          } else if (permission === 'denied') {
+                            toast({ 
+                              title: "Permission Denied", 
+                              description: "Please enable notifications in browser settings",
+                              variant: "destructive"
+                            });
+                          }
+                        } else {
+                          await unsubscribe();
+                          toast({ title: "Disabled", description: "Alarm notifications disabled" });
+                        }
+                      } finally {
+                        setNotifLoading(false);
+                      }
+                    }}
+                    data-testid="switch-notifications"
+                  />
+                </div>
+
+                {permission === 'denied' && (
+                  <p className="text-xs text-red-500 bg-red-50 p-2 rounded">
+                    Notifications blocked by browser. Please enable from browser settings.
+                  </p>
+                )}
+
+                {isSubscribed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={async () => {
+                      const result = await testNotification();
+                      if (result) {
+                        toast({ title: "Test Sent", description: "Check for notification!" });
+                      }
+                    }}
+                    data-testid="button-test-notification"
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Test Notification
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
+                Push notifications are not supported in this browser.
+              </p>
+            )}
           </div>
         </section>
 

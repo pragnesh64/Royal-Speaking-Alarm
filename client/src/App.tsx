@@ -13,6 +13,7 @@ import Meetings from "@/pages/meetings";
 import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -46,6 +47,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Router />
+        <PushNotificationPrompt />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
