@@ -77,8 +77,8 @@ export default function SettingsPage() {
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Could not start checkout. Please try again.",
+        title: t.error,
+        description: t.paymentFailed,
         variant: "destructive",
       });
     },
@@ -145,11 +145,11 @@ export default function SettingsPage() {
             });
             const result = await verifyRes.json();
             if (result.success) {
-              toast({ title: "Success!", description: "Payment successful. Enjoy MyPA Premium!" });
+              toast({ title: t.success, description: t.paymentSuccess });
               queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
             }
           } catch (err) {
-            toast({ title: "Error", description: "Payment verification failed", variant: "destructive" });
+            toast({ title: t.error, description: t.paymentFailed, variant: "destructive" });
           }
         },
         prefill: {
@@ -168,8 +168,8 @@ export default function SettingsPage() {
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', (response: any) => {
         toast({ 
-          title: "Payment Failed", 
-          description: response.error?.description || "Payment could not be completed. Please try again.", 
+          title: t.paymentFailed, 
+          description: response.error?.description || t.paymentFailed, 
           variant: "destructive" 
         });
         setClickedPlan(null);
@@ -178,7 +178,7 @@ export default function SettingsPage() {
       setClickedPlan(null);
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not start payment", variant: "destructive" });
+      toast({ title: t.error, description: t.paymentFailed, variant: "destructive" });
       setClickedPlan(null);
     }
   });
@@ -225,7 +225,7 @@ export default function SettingsPage() {
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4 mr-1" />
-            Logout
+            {t.logout}
           </Button>
         </div>
       </div>
@@ -276,8 +276,8 @@ export default function SettingsPage() {
                 <Bell className="w-5 h-5 text-orange-500" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[#002E6E]">Alarm Notifications</h3>
-                <p className="text-xs text-slate-400 font-serif italic">App बंद होने पर भी alarm बजेगा</p>
+                <h3 className="text-lg font-bold text-[#002E6E]">{t.alarmNotifications}</h3>
+                <p className="text-xs text-slate-400 font-serif italic">{t.alarmNotificationsDesc}</p>
               </div>
             </div>
 
@@ -291,7 +291,7 @@ export default function SettingsPage() {
                       <BellOff className="w-4 h-4 text-slate-400" />
                     )}
                     <span className="text-sm font-medium">
-                      {isSubscribed ? 'Notifications On' : 'Notifications Off'}
+                      {isSubscribed ? t.notificationsOn : t.notificationsOff}
                     </span>
                   </div>
                   <Switch
@@ -303,17 +303,17 @@ export default function SettingsPage() {
                         if (checked) {
                           const success = await subscribe();
                           if (success) {
-                            toast({ title: "Success", description: "Alarm notifications enabled!" });
+                            toast({ title: t.success, description: t.notificationsEnabled });
                           } else if (permission === 'denied') {
                             toast({ 
-                              title: "Permission Denied", 
-                              description: "Please enable notifications in browser settings",
+                              title: t.error, 
+                              description: t.notificationsBlocked,
                               variant: "destructive"
                             });
                           }
                         } else {
                           await unsubscribe();
-                          toast({ title: "Disabled", description: "Alarm notifications disabled" });
+                          toast({ title: t.dismiss, description: t.notificationsDisabled });
                         }
                       } finally {
                         setNotifLoading(false);
@@ -325,7 +325,7 @@ export default function SettingsPage() {
 
                 {permission === 'denied' && (
                   <p className="text-xs text-red-500 bg-red-50 p-2 rounded">
-                    Notifications blocked by browser. Please enable from browser settings.
+                    {t.enableInBrowserSettings}
                   </p>
                 )}
 
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                     data-testid="button-test-notification"
                   >
                     <Bell className="w-4 h-4 mr-2" />
-                    Test Notification
+                    {t.testNotification}
                   </Button>
                 )}
 
@@ -353,11 +353,8 @@ export default function SettingsPage() {
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                       <div className="text-xs">
-                        <p className="font-semibold text-amber-800 mb-1">Screen Off पर Alarm के लिए:</p>
-                        <ul className="text-amber-700 space-y-1 list-disc list-inside">
-                          <li>Settings → Apps → MyPA → Battery → "Don't optimize" select करें</li>
-                          <li>या Settings → Battery → Battery optimization → MyPA → "Don't optimize"</li>
-                        </ul>
+                        <p className="font-semibold text-amber-800 mb-1">{t.batteryWarning}</p>
+                        <p className="text-amber-700">{t.batteryWarningDesc}</p>
                       </div>
                     </div>
                   </div>
@@ -365,7 +362,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
-                Push notifications are not supported in this browser.
+                {t.notificationNotSupported}
               </p>
             )}
           </div>
@@ -377,29 +374,25 @@ export default function SettingsPage() {
                 <Smartphone className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[#002E6E]">Screen Off Alarms</h3>
-                <p className="text-xs text-slate-400 font-serif italic">Phone बंद होने पर alarm चलाने के लिए</p>
+                <h3 className="text-lg font-bold text-[#002E6E]">{t.screenOffAlarms}</h3>
+                <p className="text-xs text-slate-400 font-serif italic">{t.screenOffDesc}</p>
               </div>
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                <p className="font-semibold text-blue-800 mb-2">Step 1: App Install करें</p>
-                <p className="text-blue-700 text-xs">Browser में "Add to Home Screen" या "Install App" पर click करें। PWA install होने के बाद alarms better काम करते हैं।</p>
+              <div className="p-3 bg-blue-50 rounded-lg pl-4">
+                <p className="font-semibold text-blue-800 mb-2">{t.step1InstallApp}</p>
+                <p className="text-blue-700 text-xs">{t.step1InstallDesc}</p>
               </div>
 
-              <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                <p className="font-semibold text-green-800 mb-2">Step 2: Battery Optimization बंद करें</p>
-                <p className="text-green-700 text-xs">
-                  <strong>Samsung:</strong> Settings → Apps → MyPA → Battery → Unrestricted<br/>
-                  <strong>Xiaomi:</strong> Settings → Apps → MyPA → Battery saver → No restrictions<br/>
-                  <strong>Other:</strong> Settings → Battery → Battery optimization → MyPA → Don't optimize
-                </p>
+              <div className="p-3 bg-green-50 rounded-lg pl-4">
+                <p className="font-semibold text-green-800 mb-2">{t.step2BatteryOpt}</p>
+                <p className="text-green-700 text-xs">{t.step2BatteryDesc}</p>
               </div>
 
-              <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
-                <p className="font-semibold text-orange-800 mb-2">Step 3: Auto-Start Enable करें (Xiaomi/Oppo/Vivo)</p>
-                <p className="text-orange-700 text-xs">Settings → Apps → MyPA → Autostart → Enable करें। यह app को background में run करने देता है।</p>
+              <div className="p-3 bg-orange-50 rounded-lg pl-4">
+                <p className="font-semibold text-orange-800 mb-2">{t.step3AutoStart}</p>
+                <p className="text-orange-700 text-xs">{t.step3AutoStartDesc}</p>
               </div>
             </div>
           </div>
@@ -417,40 +410,13 @@ export default function SettingsPage() {
               </div>
               <p className="text-blue-200 text-sm mb-3">{t.subscription}</p>
 
-              {/* Premium Features */}
               <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Unlimited Alarms</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Medicine Reminders</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Meeting Schedules</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>18+ Languages</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Voice Recording</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Music Alarms</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Photo Upload</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-green-400" />
-                  <span>Ad-Free</span>
-                </div>
+                {[t.unlimitedAlarms, t.medicineReminders, t.meetingSchedules, `18+ ${t.language}`, t.voiceRecording, t.musicAlarms, t.photoUpload, t.adFree].map((feature, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Check className="w-3 h-3 text-green-400" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Current Plan Status */}
@@ -461,8 +427,8 @@ export default function SettingsPage() {
                     {user?.subscriptionStatus === 'active' 
                       ? t.premium 
                       : user?.subscriptionStatus === 'trial' 
-                        ? 'Free Trial' 
-                        : 'Free Plan'}
+                        ? t.freeTrial 
+                        : t.freePlan}
                   </p>
                   {user?.subscriptionStatus === 'trial' && user?.trialEndsAt && (
                     <p className="text-xs text-blue-300">
@@ -480,8 +446,8 @@ export default function SettingsPage() {
                   {user?.subscriptionStatus === 'active' 
                     ? t.active 
                     : user?.subscriptionStatus === 'trial' 
-                      ? '30 Days Free' 
-                      : 'Upgrade'}
+                      ? t.freeTrial 
+                      : t.upgrade}
                 </span>
               </div>
 
@@ -499,7 +465,7 @@ export default function SettingsPage() {
                     ) : (
                       <ExternalLink className="w-4 h-4 mr-2" />
                     )}
-                    Manage Subscription
+                    {t.manageSubscription}
                   </Button>
                 </div>
               ) : (
@@ -514,7 +480,7 @@ export default function SettingsPage() {
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <div className="flex justify-between items-center w-full">
-                        <span>Monthly</span>
+                        <span>{t.monthly}</span>
                         <span className="num">₹5 / 30 Days</span>
                       </div>
                     )}
@@ -525,12 +491,12 @@ export default function SettingsPage() {
                     disabled={razorpayOrderMutation.isPending || !razorpayLoaded}
                     data-testid="button-subscribe-yearly"
                   >
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-bl-lg font-bold">SAVE 31%</div>
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-bl-lg font-bold">{t.savePct}</div>
                     {razorpayOrderMutation.isPending && clickedPlan === 'yearly' ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <div className="flex justify-between items-center w-full">
-                        <span>Yearly</span>
+                        <span>{t.yearly}</span>
                         <span className="num">₹6 / Year</span>
                       </div>
                     )}

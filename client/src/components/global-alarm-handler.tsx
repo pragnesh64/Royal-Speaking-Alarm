@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { useAlarms, useUpdateAlarm } from "@/hooks/use-alarms";
 import { useMedicines } from "@/hooks/use-medicines";
+import { useTranslations } from "@/hooks/use-translations";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, X } from "lucide-react";
@@ -32,6 +33,7 @@ export function GlobalAlarmHandler() {
   const { data: alarms } = useAlarms();
   const { data: medicines } = useMedicines();
   const updateAlarm = useUpdateAlarm();
+  const t = useTranslations();
 
   const [activeAlarms, setActiveAlarms] = useState<Set<number>>(new Set());
   const [activeMeds, setActiveMeds] = useState<Set<number>>(new Set());
@@ -397,7 +399,7 @@ export function GlobalAlarmHandler() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              <span className="text-lg font-bold">{activeAlarmPopup?.type === 'alarm' ? 'Alarm' : 'Medicine Reminder'}</span>
+              <span className="text-lg font-bold">{activeAlarmPopup?.type === 'alarm' ? t.alarm : t.medicineReminder}</span>
             </div>
             <Button
               variant="ghost"
@@ -430,14 +432,14 @@ export function GlobalAlarmHandler() {
             className="w-full h-12 text-lg rounded-xl border-2 border-[#00BAF2] text-[#00BAF2] hover:bg-[#00BAF2]/10 font-semibold"
             data-testid="button-remind-later"
           >
-            Remind Me Later (5 min)
+            {t.remindMeLater}
           </Button>
           <Button
             onClick={dismissAlarm}
             className="w-full h-12 text-lg rounded-xl bg-[#002E6E] hover:bg-[#002E6E]/90 text-white font-semibold"
             data-testid="button-done"
           >
-            Done
+            {t.done}
           </Button>
         </div>
       </DialogContent>
