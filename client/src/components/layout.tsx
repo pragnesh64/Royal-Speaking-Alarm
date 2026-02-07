@@ -123,8 +123,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main 
         className="flex-1 h-full overflow-y-auto p-4 md:p-8 pt-20 lg:pt-8"
         onClick={() => {
-          // Unlock audio/speech on first user interaction
-          if (!window.speechSynthesis.speaking) {
+          if (window.speechSynthesis && !window.speechSynthesis.speaking) {
             const dummy = new SpeechSynthesisUtterance("");
             window.speechSynthesis.speak(dummy);
           }
