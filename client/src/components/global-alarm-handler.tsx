@@ -4,13 +4,24 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAlarms, useUpdateAlarm } from "@/hooks/use-alarms";
 import { useMedicines } from "@/hooks/use-medicines";
 import { useTranslations } from "@/hooks/use-translations";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, X } from "lucide-react";
+import { Clock, Users, X } from "lucide-react";
+
+interface Meeting {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  location?: string;
+  textToSpeak?: string;
+  enabled: boolean;
+}
 
 interface ActiveAlarmData {
   id: number;
-  type: 'alarm' | 'medicine';
+  type: 'alarm' | 'medicine' | 'meeting';
   alarmType?: string;
   title: string;
   message: string;
@@ -32,13 +43,20 @@ export function GlobalAlarmHandler() {
   const { user } = useAuth();
   const { data: alarms } = useAlarms();
   const { data: medicines } = useMedicines();
+  const { data: meetings = [] } = useQuery<Meeting[]>({
+    queryKey: ['/api/meetings'],
+    enabled: !!user,
+    refetchInterval: 60000,
+  });
   const updateAlarm = useUpdateAlarm();
   const t = useTranslations();
 
   const [activeAlarms, setActiveAlarms] = useState<Set<number>>(new Set());
   const [activeMeds, setActiveMeds] = useState<Set<number>>(new Set());
+  const [activeMeetings, setActiveMeetings] = useState<Set<number>>(new Set());
   const [dismissedAlarms, setDismissedAlarms] = useState<Map<number, string>>(new Map());
   const [dismissedMeds, setDismissedMeds] = useState<Map<number, string>>(new Map());
+  const [dismissedMeetings, setDismissedMeetings] = useState<Map<number, string>>(new Map());
   const [activeAlarmPopup, setActiveAlarmPopup] = useState<ActiveAlarmData | null>(null);
   const [snoozeTimeout, setSnoozeTimeout] = useState<NodeJS.Timeout | null>(null);
   const vibrateIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,13 +90,13 @@ export function GlobalAlarmHandler() {
     speak();
   }, []);
 
-  const triggerAlarm = useCallback((item: any, type: 'alarm' | 'medicine') => {
+  const triggerAlarm = useCallback((item: any, type: 'alarm' | 'medicine' | 'meeting') => {
     console.log(`[GlobalAlarm] Triggering ${type}:`, item.id);
     const duration = (item.duration || 30) * 1000;
     const shouldLoop = item.loop !== false;
     let audio: HTMLAudioElement | undefined;
 
-    const message = item.textToSpeak || item.title || (type === 'medicine' ? `Time for medicine: ${item.name}` : 'Alarm');
+    const message = item.textToSpeak || item.title || (type === 'medicine' ? `Time for medicine: ${item.name}` : type === 'meeting' ? `Meeting: ${item.title}${item.location ? ` at ${item.location}` : ''}` : 'Alarm');
 
     setActiveAlarmPopup({
       id: item.id,
@@ -135,26 +153,28 @@ export function GlobalAlarmHandler() {
   const triggerFromPushData = useCallback((data: any) => {
     console.log('[GlobalAlarm] Triggering from push data:', data);
     const isMedicine = data.type === 'medicine';
+    const isMeeting = data.type === 'meeting';
     const medDosage = data.dosage ? ` (${data.dosage})` : '';
     const medName = data.title || t.medicine;
     const defaultMedText = `${t.timeForMedicine}: ${medName}${medDosage}`;
     
     const item = {
       id: data.id || data.alarmId || 0,
-      title: data.title || (isMedicine ? t.medicineReminder : t.alarm),
+      title: data.title || (isMeeting ? t.myMeetings : isMedicine ? t.medicineReminder : t.alarm),
       name: data.title || (isMedicine ? t.medicine : t.alarm),
-      textToSpeak: data.textToSpeak || data.body || (isMedicine ? defaultMedText : undefined),
+      textToSpeak: data.textToSpeak || data.body || (isMedicine ? defaultMedText : isMeeting ? `Meeting: ${data.title}` : undefined),
       type: data.alarmType || 'speaking',
       voiceUrl: data.voiceUrl,
       imageUrl: data.imageUrl || data.photoUrl,
       photoUrl: data.photoUrl,
+      location: data.location,
       language: data.language || 'english',
       duration: data.duration || 30,
       loop: data.loop !== false,
       voiceGender: data.voiceGender || 'female',
     };
-    const alarmKind = isMedicine ? 'medicine' : 'alarm';
-    triggerAlarm(item, alarmKind as 'alarm' | 'medicine');
+    const alarmKind: 'alarm' | 'medicine' | 'meeting' = isMeeting ? 'meeting' : isMedicine ? 'medicine' : 'alarm';
+    triggerAlarm(item, alarmKind);
   }, [triggerAlarm, t]);
 
   const dismissAlarm = useCallback(() => {
@@ -182,6 +202,17 @@ export function GlobalAlarmHandler() {
           return next;
         });
         setDismissedAlarms(prev => {
+          const next = new Map(prev);
+          next.set(activeAlarmPopup.id, currentTime);
+          return next;
+        });
+      } else if (activeAlarmPopup.type === 'meeting') {
+        setActiveMeetings(prev => {
+          const next = new Set(prev);
+          next.delete(activeAlarmPopup.id);
+          return next;
+        });
+        setDismissedMeetings(prev => {
           const next = new Map(prev);
           next.set(activeAlarmPopup.id, currentTime);
           return next;
@@ -314,10 +345,48 @@ export function GlobalAlarmHandler() {
           }
         }
       });
+
+      meetings?.forEach(meeting => {
+        if (!meeting.enabled) return;
+        const isTimeMatch = meeting.time === currentTime;
+        const isDateMatch = meeting.date === currentDate;
+        const wasDismissedThisMinute = dismissedMeetings.get(meeting.id) === currentTime;
+
+        if (isTimeMatch && isDateMatch) {
+          if (!activeMeetings.has(meeting.id) && !wasDismissedThisMinute) {
+            const meetingItem = {
+              ...meeting,
+              type: 'speaking' as const,
+              textToSpeak: meeting.textToSpeak || `Meeting: ${meeting.title}${meeting.location ? ` at ${meeting.location}` : ''}`,
+              language: user?.language || 'english',
+              duration: 30,
+              loop: true,
+              voiceGender: 'female',
+            };
+            triggerAlarm(meetingItem, 'meeting');
+            setActiveMeetings(prev => new Set(prev).add(meeting.id));
+          }
+        } else {
+          if (activeMeetings.has(meeting.id) && !activeAlarmPopup) {
+            setActiveMeetings(prev => {
+              const next = new Set(prev);
+              next.delete(meeting.id);
+              return next;
+            });
+          }
+          if (dismissedMeetings.has(meeting.id) && dismissedMeetings.get(meeting.id) !== currentTime) {
+            setDismissedMeetings(prev => {
+              const next = new Map(prev);
+              next.delete(meeting.id);
+              return next;
+            });
+          }
+        }
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [alarms, medicines, activeAlarms, activeMeds, activeAlarmPopup, dismissedAlarms, dismissedMeds, triggerAlarm]);
+  }, [alarms, medicines, meetings, activeAlarms, activeMeds, activeMeetings, activeAlarmPopup, dismissedAlarms, dismissedMeds, dismissedMeetings, triggerAlarm, user]);
 
   useEffect(() => {
     const handleSWMessage = (event: MessageEvent) => {
@@ -398,8 +467,8 @@ export function GlobalAlarmHandler() {
         <div className="bg-gradient-to-br from-[#002E6E] to-[#001a40] p-6 text-white">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-lg font-bold">{activeAlarmPopup?.type === 'alarm' ? t.alarm : t.medicineReminder}</span>
+              {activeAlarmPopup?.type === 'meeting' ? <Users className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+              <span className="text-lg font-bold">{activeAlarmPopup?.type === 'alarm' ? t.alarm : activeAlarmPopup?.type === 'meeting' ? t.myMeetings : t.medicineReminder}</span>
             </div>
             <Button
               variant="ghost"
