@@ -1,14 +1,12 @@
 /**
- * Vercel Serverless Function Entry Point
+ * Vercel Serverless Function — Source file
  * 
- * This file wraps the Express app as a Vercel serverless function.
- * All API routes are handled through this single entry point.
+ * This gets compiled by esbuild into api/index.mjs
+ * DO NOT put this in the api/ folder directly.
  */
-import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "../server/routes";
+import { registerRoutes } from "./routes";
 import { createServer } from "http";
-import { WebhookHandlers } from "../server/webhookHandlers";
 
 const app = express();
 
@@ -18,34 +16,9 @@ declare module "http" {
   }
 }
 
-// Stripe webhook route (BEFORE json parser — needs raw body)
-app.post(
-  '/api/stripe/webhook',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
-    const signature = req.headers['stripe-signature'];
-    if (!signature) {
-      return res.status(400).json({ error: 'Missing stripe-signature' });
-    }
-
-    try {
-      const sig = Array.isArray(signature) ? signature[0] : signature;
-      if (!Buffer.isBuffer(req.body)) {
-        console.error('[Stripe] Webhook body is not a Buffer');
-        return res.status(500).json({ error: 'Webhook processing error' });
-      }
-
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
-      res.status(200).json({ received: true });
-    } catch (error: any) {
-      console.error('[Stripe] Webhook error:', error.message);
-      res.status(400).json({ error: 'Webhook processing error' });
-    }
-  }
-);
-
 // Enable ETag for automatic client caching
 app.set('etag', 'weak');
+app.set("trust proxy", 1);
 
 // Body parsers
 app.use(
@@ -77,19 +50,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Register all routes
+// Register all routes (lazy init for serverless cold start)
 const httpServer = createServer(app);
 let isRoutesRegistered = false;
+let routesError: Error | null = null;
 
 async function ensureRoutes() {
-  if (!isRoutesRegistered) {
+  if (isRoutesRegistered) return;
+  if (routesError) throw routesError;
+  
+  try {
     await registerRoutes(httpServer, app);
     
-    // Error handler
+    // Error handler (must be after all routes)
     app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      console.error("Internal Server Error:", err);
+      console.error("Server Error:", err.message || err);
       if (res.headersSent) {
         return next(err);
       }
@@ -97,15 +74,29 @@ async function ensureRoutes() {
     });
     
     isRoutesRegistered = true;
+    console.log('[Vercel] Routes registered successfully');
+  } catch (err: any) {
+    routesError = err;
+    console.error('[Vercel] Failed to register routes:', err.message || err);
+    throw err;
   }
 }
 
-// Ensure routes are registered before handling requests
-const routesPromise = ensureRoutes();
+// Start route registration immediately (for warm starts)
+const routesPromise = ensureRoutes().catch(() => {});
 
-// Export for Vercel
+// Export for Vercel serverless
 export default async function handler(req: any, res: any) {
-  await routesPromise;
-  return app(req, res);
+  try {
+    await ensureRoutes();
+    return app(req, res);
+  } catch (err: any) {
+    console.error('[Vercel] Handler error:', err.message || err);
+    res.status(500).json({ 
+      error: 'Server initialization failed',
+      message: err.message || 'Unknown error',
+      hint: 'Check Environment Variables (DATABASE_URL, SESSION_SECRET) in Vercel Dashboard → Settings'
+    });
+  }
 }
 
