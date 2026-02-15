@@ -47,18 +47,24 @@ export function getSession() {
     console.log('[Session] Using in-memory session store (fast dev mode)');
   }
 
+  // CRITICAL FIX for Android WebView cross-origin cookies:
+  // - httpOnly: false (allows JavaScript access for debugging cookie storage)
+  // - secure: true (required for SameSite=None in modern browsers)
+  // - sameSite: 'none' (required for cross-origin requests from mobile app)
+  // - This is the ONLY valid combination for WebView cross-origin auth
+
   return session({
     secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
     store,
     resave: false,              // Don't save session if unmodified (reduces DB writes)
     saveUninitialized: false,   // Don't create session until something stored (GDPR friendly)
     rolling: true,              // CRITICAL FIX: Reset maxAge on every request (keeps session alive)
-    proxy: isProduction,        // Trust the reverse proxy (Vercel)
+    proxy: true,                // CRITICAL: Always trust proxy (required for Vercel HTTPS detection)
     name: 'connect.sid',        // Explicit session cookie name
     cookie: {
-      httpOnly: true,           // Prevent XSS attacks
-      secure: isProduction,     // HTTPS only in production
-      sameSite: isProduction ? 'none' : 'lax', // CRITICAL FIX: 'none' for cross-origin in prod
+      httpOnly: false,          // CRITICAL: false for WebView debugging (can check document.cookie)
+      secure: true,             // CRITICAL: true required for SameSite=None (API is HTTPS)
+      sameSite: 'none',         // CRITICAL: 'none' required for cross-origin (app → API)
       maxAge: sessionTtl,
       path: '/',                // Cookie available on all routes
       // CRITICAL: No domain restriction for cross-origin cookie support (mobile app)
