@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ALARM ACTIVITY - CLEAN FULL SCREEN DESIGN
+    Dark blue background with centered content
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1B3E"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:fitsSystemWindows="true">
+
+    <!-- ═══════ TOP SPACER ═══════ -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- ═══════ ALARM LABEL ═══════ -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⏰  ALARM"
+        android:textColor="#5588BB"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.2"
+        android:gravity="center"
+        android:layout_marginBottom="28dp" />
+
+    <!-- ═══════ CURRENT TIME (Big) ═══════ -->
+    <TextView
+        android:id="@+id/alarm_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="08:33 AM"
+        android:textColor="#FFFFFF"
+        android:textSize="64sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-light"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:layout_marginBottom="8dp" />
+
+    <!-- ═══════ DATE ═══════ -->
+    <TextView
+        android:id="@+id/alarm_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sunday, 15 Feb 2026"
+        android:textColor="#7799CC"
+        android:textSize="15sp"
+        android:gravity="center"
+        android:layout_marginBottom="36dp" />
+
+    <!-- ═══════ DIVIDER LINE ═══════ -->
+    <View
+        android:layout_width="60dp"
+        android:layout_height="2dp"
+        android:background="#1A3A6B"
+        android:layout_marginBottom="28dp" />
+
+    <!-- ═══════ ALARM TITLE ═══════ -->
+    <TextView
+        android:id="@+id/alarm_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Morning Alarm"
+        android:textColor="#00C8FF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:paddingHorizontal="32dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:layout_marginBottom="12dp" />
+
+    <!-- ═══════ ALARM MESSAGE ═══════ -->
+    <TextView
+        android:id="@+id/alarm_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Time to wake up!"
+        android:textColor="#99BBDD"
+        android:textSize="16sp"
+        android:fontFamily="sans-serif"
+        android:gravity="center"
+        android:paddingHorizontal="40dp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- ═══════ ALARM TYPE BADGE ═══════ -->
+    <TextView
+        android:id="@+id/alarm_type"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔔 Sound Alarm"
+        android:textColor="#5580AA"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp"
+        android:visibility="visible" />
+
+    <!-- ═══════ BOTTOM SPACER ═══════ -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- ═══════ BOTTOM ACTION BUTTONS ═══════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="32dp"
+        android:gravity="center">
+
+        <!-- Snooze info text -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Snooze will ring again in 5 minutes"
+            android:textColor="#5580AA"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- DISMISS ALARM (Primary - Blue) -->
+        <Button
+            android:id="@+id/btn_dismiss"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="✓  DISMISS ALARM"
+            android:textSize="17sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:backgroundTint="#00A8E8"
+            android:elevation="4dp"
+            android:stateListAnimator="@null"
+            android:layout_marginBottom="12dp" />
+
+        <!-- SNOOZE 5 MINUTES (Secondary - Outline) -->
+        <Button
+            android:id="@+id/btn_snooze"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="😴  SNOOZE 5 MINUTES"
+            android:textSize="15sp"
+            android:textColor="#88BBEE"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:backgroundTint="#152A50"
+            android:elevation="0dp"
+            android:stateListAnimator="@null" />
+
+    </LinearLayout>
+
+</LinearLayout>

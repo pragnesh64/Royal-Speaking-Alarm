@@ -1,13 +1,19 @@
-import { db } from './db';
-import { alarms, medicines, meetings } from '@shared/schema';
+/**
+ * Vercel Cron Job: Alarm Scheduler
+ * 
+ * Runs every minute (configured in vercel.json).
+ * Checks active alarms/medicines/meetings and sends push notifications.
+ * 
+ * This replaces the setInterval-based scheduler that runs on traditional servers.
+ * Vercel Cron Jobs trigger this endpoint automatically.
+ */
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { db } from '../../server/db';
+import { alarms, medicines, meetings } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import { sendPushNotification } from './pushNotification';
+import { sendPushNotification } from '../../server/pushNotification';
 
-let schedulerInterval: NodeJS.Timeout | null = null;
-let lastCheckedMinute: string = '';
-
-function getCurrentTimeIST(): { time: string; day: string; date: string; minutes: number } {
-  // Use Intl.DateTimeFormat for reliable IST conversion
+function getCurrentTimeIST(): { time: string; day: string; date: string } {
   const now = new Date();
   const options: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Kolkata',
@@ -29,7 +35,6 @@ function getCurrentTimeIST(): { time: string; day: string; date: string; minutes
   const minutes = getValue('minute').padStart(2, '0');
   const time = `${hours}:${minutes}`;
   
-  // Map weekday to short form
   const weekdayMap: Record<string, string> = {
     'Sun': 'Sun', 'Mon': 'Mon', 'Tue': 'Tue', 'Wed': 'Wed',
     'Thu': 'Thu', 'Fri': 'Fri', 'Sat': 'Sat'
@@ -41,39 +46,38 @@ function getCurrentTimeIST(): { time: string; day: string; date: string; minutes
   const dateNum = getValue('day').padStart(2, '0');
   const date = `${year}-${month}-${dateNum}`;
   
-  return { time, day, date, minutes: parseInt(minutes) };
+  return { time, day, date };
 }
 
 function timeMatches(alarmTime: string, currentTime: string): boolean {
-  // Compare HH:mm format
   const alarmHHMM = alarmTime.substring(0, 5);
   return alarmHHMM === currentTime;
 }
 
-async function checkAndSendAlarms() {
-  const { time, day, date } = getCurrentTimeIST();
-  
-  // Avoid checking same minute twice
-  const minuteKey = `${date}-${time}`;
-  if (minuteKey === lastCheckedMinute) {
-    return;
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Verify this is called by Vercel Cron (security)
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // If CRON_SECRET is not set, allow anyway (for testing)
+    if (process.env.CRON_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
-  lastCheckedMinute = minuteKey;
-  
-  console.log(`[Scheduler] Checking at ${time} on ${day} (${date})`);
+
+  const { time, day, date } = getCurrentTimeIST();
+  console.log(`[Cron] Checking alarms at ${time} on ${day} (${date})`);
 
   try {
-    // Run all 3 queries in PARALLEL instead of sequentially
-    // Saves ~400-800ms (2 fewer sequential DB round-trips)
+    // Run all 3 queries in PARALLEL
     const [activeAlarms, activeMedicines, activeMeetings] = await Promise.all([
       db.select().from(alarms).where(eq(alarms.isActive, true)),
       db.select().from(medicines).where(eq(medicines.isActive, true)),
       db.select().from(meetings).where(eq(meetings.enabled, true)),
     ]);
 
-    // Collect all push notification promises to send in parallel
     const pushPromises: Promise<any>[] = [];
 
+    // Check alarms
     for (const alarm of activeAlarms) {
       let shouldTrigger = false;
 
@@ -88,7 +92,7 @@ async function checkAndSendAlarms() {
       }
 
       if (shouldTrigger) {
-        console.log(`[Scheduler] Triggering alarm ${alarm.id}: ${alarm.title}`);
+        console.log(`[Cron] Triggering alarm ${alarm.id}: ${alarm.title}`);
         pushPromises.push(
           sendPushNotification(alarm.userId, {
             title: alarm.title || 'MyPA Alarm',
@@ -109,11 +113,12 @@ async function checkAndSendAlarms() {
       }
     }
 
+    // Check medicines
     for (const medicine of activeMedicines) {
       if (medicine.times && medicine.times.length > 0) {
         for (const medTime of medicine.times) {
           if (timeMatches(medTime, time)) {
-            console.log(`[Scheduler] Triggering medicine ${medicine.id}: ${medicine.name}`);
+            console.log(`[Cron] Triggering medicine ${medicine.id}: ${medicine.name}`);
             pushPromises.push(
               sendPushNotification(medicine.userId, {
                 title: `Medicine: ${medicine.name}`,
@@ -137,9 +142,10 @@ async function checkAndSendAlarms() {
       }
     }
 
+    // Check meetings
     for (const meeting of activeMeetings) {
       if (timeMatches(meeting.time, time) && meeting.date === date) {
-        console.log(`[Scheduler] Triggering meeting ${meeting.id}: ${meeting.title}`);
+        console.log(`[Cron] Triggering meeting ${meeting.id}: ${meeting.title}`);
         pushPromises.push(
           sendPushNotification(meeting.userId, {
             title: `Meeting: ${meeting.title}`,
@@ -153,33 +159,28 @@ async function checkAndSendAlarms() {
     }
 
     // Send all notifications in parallel
+    let results = { sent: 0, failed: 0 };
     if (pushPromises.length > 0) {
-      await Promise.allSettled(pushPromises);
+      const settled = await Promise.allSettled(pushPromises);
+      results.sent = settled.filter(r => r.status === 'fulfilled').length;
+      results.failed = settled.filter(r => r.status === 'rejected').length;
     }
-  } catch (error) {
-    console.error('[Scheduler] Error checking alarms:', error);
+
+    return res.status(200).json({
+      ok: true,
+      time,
+      day,
+      date,
+      checked: {
+        alarms: activeAlarms.length,
+        medicines: activeMedicines.length,
+        meetings: activeMeetings.length,
+      },
+      notifications: results,
+    });
+  } catch (error: any) {
+    console.error('[Cron] Error:', error);
+    return res.status(500).json({ error: error.message });
   }
 }
 
-export function startAlarmScheduler() {
-  if (schedulerInterval) {
-    console.log('[Scheduler] Already running');
-    return;
-  }
-
-  console.log('[Scheduler] Starting alarm scheduler...');
-  
-  // Check every 30 seconds for better accuracy
-  schedulerInterval = setInterval(checkAndSendAlarms, 30 * 1000);
-  
-  // Also run immediately
-  checkAndSendAlarms();
-}
-
-export function stopAlarmScheduler() {
-  if (schedulerInterval) {
-    clearInterval(schedulerInterval);
-    schedulerInterval = null;
-    console.log('[Scheduler] Stopped');
-  }
-}

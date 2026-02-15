@@ -8,8 +8,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
 
+        <!-- MainActivity: Normal app entry point -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
@@ -26,6 +28,36 @@
             </intent-filter>
 
         </activity>
+
+        <!-- AlarmActivity: Opens when user taps notification -->
+        <!-- NOTE: This is OPTIONAL - user opens it manually -->
+        <activity
+            android:name=".AlarmActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:theme="@style/AppTheme.AlarmScreen"
+            android:launchMode="singleTop"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="false"
+            android:noHistory="false" />
+
+        <!-- AlarmReceiver: Receives alarm broadcasts from AlarmManager -->
+        <!-- CRITICAL: exported="true" allows system AlarmManager to trigger it -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true" />
+
+        <!-- AlarmRingingService: Foreground service that rings alarm -->
+        <!-- This is the PRIMARY component that handles alarm ringing -->
+        <service
+            android:name=".AlarmRingingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted"
+            android:stopWithTask="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -45,16 +77,34 @@
         </receiver>
     </application>
 
-    <!-- Permissions -->
+    <!-- MANDATORY PERMISSIONS -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Notification permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Exact alarm permissions (CRITICAL for reliable alarms) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Sound and vibration -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Wake locks (to keep CPU awake) -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Boot completed (to reschedule alarms after reboot) -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Foreground service permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+
+    <!-- Battery optimization (optional but recommended) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Full screen intent (for notification) -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 </manifest>

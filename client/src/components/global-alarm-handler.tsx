@@ -5,9 +5,11 @@ import { useAlarms, useUpdateAlarm } from "@/hooks/use-alarms";
 import { useMedicines } from "@/hooks/use-medicines";
 import { useTranslations } from "@/hooks/use-translations";
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { Capacitor } from '@capacitor/core';
 
 interface Meeting {
   id: number;
@@ -29,6 +31,7 @@ interface ActiveAlarmData {
   voiceUrl?: string;
   audio?: HTMLAudioElement;
   language?: string;
+  isDateAlarm?: boolean; // true if this alarm was triggered by a date match (one-time)
 }
 
 const langMap: Record<string, string> = {
@@ -40,6 +43,29 @@ const langMap: Record<string, string> = {
 };
 
 export function GlobalAlarmHandler() {
+  // ═══════════════════════════════════════════════════════════════
+  // CRITICAL FIX: Disable GlobalAlarmHandler on Native Android
+  // ═══════════════════════════════════════════════════════════════
+  // PROBLEM:
+  // - Native Android has AlarmActivity (native Java UI)
+  // - Web/PWA has GlobalAlarmHandler (React component UI)
+  // - Both were showing simultaneously (double UI bug!)
+  //
+  // SOLUTION:
+  // - On native platform: Use native AlarmActivity ONLY
+  // - On web platform: Use GlobalAlarmHandler ONLY
+  // ═══════════════════════════════════════════════════════════════
+
+  const isNativePlatform = Capacitor.isNativePlatform();
+
+  // Disable on native Android/iOS - use native alarm UI instead
+  if (isNativePlatform) {
+    console.log('[GlobalAlarmHandler] Running on native platform - DISABLED (using native AlarmActivity instead)');
+    return null;
+  }
+
+  console.log('[GlobalAlarmHandler] Running on web platform - ENABLED');
+
   const { user } = useAuth();
   const { data: alarms } = useAlarms();
   const { data: medicines } = useMedicines();
@@ -61,37 +87,138 @@ export function GlobalAlarmHandler() {
   const [snoozeTimeout, setSnoozeTimeout] = useState<NodeJS.Timeout | null>(null);
   const vibrateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isSpeakingRef = useRef<boolean>(false);
+  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const speakTTS = useCallback((textToSpeak: string, language: string, voiceGender: string, shouldLoop: boolean) => {
-    isSpeakingRef.current = true;
+  // Create fallback beep sound using Web Audio API
+  const playFallbackBeep = useCallback(() => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) {
+        console.warn('[GlobalAlarm] Web Audio API not available');
+        return;
+      }
 
-    const speak = () => {
-      if (!isSpeakingRef.current) return;
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = langMap[language] || 'en-US';
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find((v) => v.lang.startsWith(utterance.lang.slice(0, 2)) && v.name.includes(voiceGender === 'male' ? 'Male' : 'Female')) ||
-                        voices.find((v) => v.lang.startsWith(utterance.lang.slice(0, 2)));
+      oscillator.frequency.value = 800; // 800 Hz beep
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
 
-      if (preferred) utterance.voice = preferred;
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5); // 500ms beep
 
-      utterance.onend = () => {
-        if (shouldLoop && isSpeakingRef.current) {
-          setTimeout(speak, 500);
+      // Loop the beep
+      const beepInterval = setInterval(() => {
+        if (!isSpeakingRef.current) {
+          clearInterval(beepInterval);
+          return;
         }
-      };
 
-      window.speechSynthesis.speak(utterance);
-    };
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = 800;
+        osc.type = 'sine';
+        gain.gain.value = 0.3;
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + 0.5);
+      }, 1000);
 
-    window.speechSynthesis.cancel();
-    speak();
+      // Store interval for cleanup
+      setTimeout(() => clearInterval(beepInterval), 30000); // Max 30 seconds
+    } catch (error) {
+      console.error('[GlobalAlarm] Failed to play fallback beep:', error);
+    }
   }, []);
 
-  const triggerAlarm = useCallback((item: any, type: 'alarm' | 'medicine' | 'meeting') => {
-    console.log(`[GlobalAlarm] Triggering ${type}:`, item.id);
+  const speakTTS = useCallback(async (textToSpeak: string, language: string, voiceGender: string, shouldLoop: boolean) => {
+    isSpeakingRef.current = true;
+    let ttsWorked = false;
+
+    const speak = async () => {
+      if (!isSpeakingRef.current) return;
+
+      try {
+        // Try native TTS first (for mobile)
+        await TextToSpeech.speak({
+          text: textToSpeak,
+          lang: langMap[language] || 'en-US',
+          rate: 1.0,
+          pitch: 1.0,
+          volume: 1.0,
+          category: 'playback',
+        });
+
+        ttsWorked = true;
+
+        // If looping is enabled and still speaking, repeat
+        if (shouldLoop && isSpeakingRef.current) {
+          setTimeout(() => speak(), 500);
+        }
+      } catch (error) {
+        console.warn('[GlobalAlarm] Native TTS failed, trying web API:', error);
+
+        // Fallback to web speechSynthesis API
+        if (window.speechSynthesis) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = langMap[language] || 'en-US';
+
+            const voices = window.speechSynthesis.getVoices();
+            const preferred = voices.find((v) => v.lang.startsWith(utterance.lang.slice(0, 2)) && v.name.includes(voiceGender === 'male' ? 'Male' : 'Female')) ||
+                              voices.find((v) => v.lang.startsWith(utterance.lang.slice(0, 2)));
+
+            if (preferred) utterance.voice = preferred;
+
+            utterance.onend = () => {
+              if (shouldLoop && isSpeakingRef.current) {
+                setTimeout(() => speak(), 500);
+              }
+            };
+
+            utterance.onerror = () => {
+              if (!ttsWorked) {
+                console.warn('[GlobalAlarm] Web TTS also failed, using fallback beep');
+                playFallbackBeep();
+              }
+            };
+
+            window.speechSynthesis.speak(utterance);
+            ttsWorked = true;
+          } catch (e) {
+            console.error('[GlobalAlarm] Web TTS error:', e);
+            if (!ttsWorked) {
+              playFallbackBeep();
+            }
+          }
+        } else {
+          console.error('[GlobalAlarm] No TTS API available, using fallback beep');
+          playFallbackBeep();
+        }
+      }
+    };
+
+    // Stop any existing speech
+    try {
+      await TextToSpeech.stop();
+    } catch (e) {
+      // Ignore errors
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    speak();
+  }, [playFallbackBeep]);
+
+  const triggerAlarm = useCallback((item: any, type: 'alarm' | 'medicine' | 'meeting', isDateAlarm?: boolean) => {
+    console.log(`[GlobalAlarm] Triggering ${type}:`, item.id, isDateAlarm ? '(date-based, one-time)' : '');
     const duration = (item.duration || 30) * 1000;
     const shouldLoop = item.loop !== false;
     let audio: HTMLAudioElement | undefined;
@@ -107,6 +234,7 @@ export function GlobalAlarmHandler() {
       imageUrl: item.imageUrl || item.photoUrl,
       voiceUrl: item.voiceUrl,
       language: item.language || user?.language || 'english',
+      isDateAlarm: isDateAlarm || false,
     });
 
     if (item.type === "vibration") {
@@ -127,24 +255,41 @@ export function GlobalAlarmHandler() {
     } else if ((item.type === "custom_voice" || item.type === "music") && item.voiceUrl) {
       audio = new Audio(item.voiceUrl);
       audio.loop = shouldLoop;
-      audio.play().catch(err => {
-        console.error("[GlobalAlarm] Audio playback failed:", err);
-        const ttsText = item.textToSpeak || item.title || item.name || t.alarm;
-        speakTTS(ttsText, item.language || user?.language || 'english', item.voiceGender || 'female', shouldLoop);
-      });
+      audio.volume = 1.0;
+
+      // Attempt to play immediately
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("[GlobalAlarm] Audio autoplay blocked, trying with user interaction:", err);
+          // Fallback to TTS if audio fails
+          const ttsText = item.textToSpeak || item.title || item.name || t.alarm;
+          speakTTS(ttsText, item.language || user?.language || 'english', item.voiceGender || 'female', shouldLoop);
+        });
+      }
 
       setActiveAlarmPopup(prev => prev ? { ...prev, audio } : null);
 
       setTimeout(() => {
-        audio?.pause();
-        if (audio) audio.src = "";
+        if (audio) {
+          audio.pause();
+          audio.src = "";
+        }
       }, duration);
     } else if (item.textToSpeak || type === 'medicine' || item.type === 'speaking') {
       const msg = item.textToSpeak || (type === 'medicine' ? `${t.timeForMedicine}: ${item.name}` : item.title || t.alarm);
       if (msg) {
         speakTTS(msg, item.language || user?.language || 'english', item.voiceGender || 'female', shouldLoop);
-        setTimeout(() => {
-          window.speechSynthesis.cancel();
+        setTimeout(async () => {
+          try {
+            await TextToSpeech.stop();
+          } catch (e) {
+            // Ignore
+          }
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
         }, duration);
       }
     }
@@ -177,9 +322,26 @@ export function GlobalAlarmHandler() {
     triggerAlarm(item, alarmKind);
   }, [triggerAlarm, t]);
 
-  const dismissAlarm = useCallback(() => {
+  const isProcessingRef = useRef(false);
+
+  const dismissAlarm = useCallback(async () => {
+    // Guard against double invocation (touch + click race condition)
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    
     isSpeakingRef.current = false;
-    window.speechSynthesis.cancel();
+
+    // Stop native TTS
+    try {
+      await TextToSpeech.stop();
+    } catch (e) {
+      // Ignore errors
+    }
+
+    // Stop web TTS
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
 
     if (vibrateIntervalRef.current) {
       clearInterval(vibrateIntervalRef.current);
@@ -206,6 +368,11 @@ export function GlobalAlarmHandler() {
           next.set(activeAlarmPopup.id, currentTime);
           return next;
         });
+        // Deactivate date-based (one-time) alarms only when user explicitly dismisses
+        if (activeAlarmPopup.isDateAlarm) {
+          console.log(`[GlobalAlarm] Deactivating date-based alarm ${activeAlarmPopup.id} on dismiss`);
+          updateAlarm.mutate({ id: activeAlarmPopup.id, isActive: false });
+        }
       } else if (activeAlarmPopup.type === 'meeting') {
         setActiveMeetings(prev => {
           const next = new Set(prev);
@@ -235,11 +402,29 @@ export function GlobalAlarmHandler() {
       clearTimeout(snoozeTimeout);
       setSnoozeTimeout(null);
     }
-  }, [activeAlarmPopup, snoozeTimeout]);
+    
+    // Reset guard after state updates
+    setTimeout(() => { isProcessingRef.current = false; }, 300);
+  }, [activeAlarmPopup, snoozeTimeout, updateAlarm]);
 
-  const snoozeAlarm = useCallback((minutes: number = 5) => {
+  const snoozeAlarm = useCallback(async (minutes: number = 5) => {
+    // Guard against double invocation (touch + click race condition)
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    
     isSpeakingRef.current = false;
-    window.speechSynthesis.cancel();
+
+    // Stop native TTS
+    try {
+      await TextToSpeech.stop();
+    } catch (e) {
+      // Ignore errors
+    }
+
+    // Stop web TTS
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
 
     if (vibrateIntervalRef.current) {
       clearInterval(vibrateIntervalRef.current);
@@ -261,7 +446,8 @@ export function GlobalAlarmHandler() {
           ? alarms?.find(a => a.id === alarmData.id)
           : medicines?.find(m => m.id === alarmData.id);
         if (item) {
-          triggerAlarm(item, alarmData.type);
+          // Preserve isDateAlarm flag so dismiss still deactivates after snooze
+          triggerAlarm(item, alarmData.type, alarmData.isDateAlarm);
         } else {
           triggerFromPushData({
             id: alarmData.id,
@@ -278,6 +464,9 @@ export function GlobalAlarmHandler() {
 
       setSnoozeTimeout(timeout);
     }
+    
+    // Reset guard after state updates
+    setTimeout(() => { isProcessingRef.current = false; }, 300);
   }, [activeAlarmPopup, alarms, medicines, triggerAlarm, triggerFromPushData]);
 
   useEffect(() => {
@@ -297,9 +486,10 @@ export function GlobalAlarmHandler() {
 
         if (isTimeMatch && (isDayMatch || isDateMatch || (!alarm.days?.length && !alarm.date))) {
           if (!activeAlarms.has(alarm.id) && !wasDismissedThisMinute) {
-            triggerAlarm(alarm, 'alarm');
+            triggerAlarm(alarm, 'alarm', isDateMatch);
             setActiveAlarms(prev => new Set(prev).add(alarm.id));
-            if (isDateMatch) updateAlarm.mutate({ id: alarm.id, isActive: false });
+            // NOTE: Date-based alarms are deactivated in dismissAlarm(), not here.
+            // This allows "Remind me later" (snooze) to work without deactivating the alarm.
           }
         } else {
           if (activeAlarms.has(alarm.id) && !activeAlarmPopup) {
@@ -461,57 +651,182 @@ export function GlobalAlarmHandler() {
     };
   }, [triggerAlarm]);
 
-  return (
-    <Dialog open={!!activeAlarmPopup} onOpenChange={(open) => !open && dismissAlarm()}>
-      <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl rounded-2xl p-0 overflow-hidden z-[9999]">
-        <div className="bg-gradient-to-br from-[#002E6E] to-[#001a40] p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              {activeAlarmPopup?.type === 'meeting' ? <Users className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-              <span className="text-lg font-bold">{activeAlarmPopup?.type === 'alarm' ? t.alarm : activeAlarmPopup?.type === 'meeting' ? t.myMeetings : t.medicineReminder}</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={dismissAlarm}
-              className="text-white hover:bg-white/20 rounded-full"
-              data-testid="button-dismiss-alarm-x"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+  const [imageError, setImageError] = useState(false);
+
+  // Reset image error when alarm changes
+  useEffect(() => {
+    setImageError(false);
+  }, [activeAlarmPopup?.id]);
+
+  const currentTime = activeAlarmPopup ? format(new Date(), "hh:mm") : "";
+  const currentPeriod = activeAlarmPopup ? format(new Date(), "a").toUpperCase() : "";
+
+  if (!activeAlarmPopup) return null;
+
+  return createPortal(
+    <div
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}
+      className="flex items-center justify-center"
+    >
+      {/* Backdrop - pointer-events:none so it never steals touches */}
+      <div
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', pointerEvents: 'none' }}
+      />
+
+      {/* Modal */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+          height: '100%',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'linear-gradient(to bottom, #001a40, #002E6E, #003d8f)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => dismissAlarm()}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            zIndex: 10,
+            width: '44px',
+            height: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            border: 'none',
+            color: 'rgba(255,255,255,0.8)',
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+          }}
+          data-testid="button-dismiss-alarm-x"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Main content area - centered */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px 24px' }}>
+          {/* Alarm type badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '24px',
+            padding: '8px 16px',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+          }}>
+            {activeAlarmPopup?.type === 'meeting' ? (
+              <Users style={{ width: '16px', height: '16px', color: '#00BAF2' }} />
+            ) : (
+              <Clock style={{ width: '16px', height: '16px', color: '#00BAF2' }} />
+            )}
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {activeAlarmPopup?.type === 'alarm' ? t.alarm : activeAlarmPopup?.type === 'meeting' ? t.myMeetings : t.medicineReminder}
+            </span>
           </div>
-          <h2 className="text-2xl font-bold mb-2">{activeAlarmPopup?.title}</h2>
-          <p className="text-blue-200 text-lg">{activeAlarmPopup?.message}</p>
+
+          {/* Pulsing alarm ring animation */}
+          <div style={{ position: 'relative', marginBottom: '28px', width: '96px', height: '96px' }}>
+            <div className="animate-ping" style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              backgroundColor: 'rgba(0,186,242,0.2)', animationDuration: '2s',
+            }} />
+            <div className="animate-pulse" style={{
+              position: 'absolute', inset: '-8px', borderRadius: '50%',
+              backgroundColor: 'rgba(0,186,242,0.1)',
+            }} />
+            <div style={{
+              position: 'relative', width: '96px', height: '96px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #00BAF2, #0090d0)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 10px 25px rgba(0,186,242,0.3)',
+            }}>
+              {activeAlarmPopup?.type === 'meeting' ? (
+                <Users style={{ width: '40px', height: '40px', color: 'white' }} />
+              ) : (
+                <svg style={{ width: '40px', height: '40px', color: 'white' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+              )}
+            </div>
+          </div>
+
+          {/* Current time */}
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <div style={{ fontSize: '60px', fontWeight: 'bold', color: 'white', letterSpacing: '-2px', lineHeight: 1 }}>
+              {currentTime}
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 600, color: '#00BAF2', marginTop: '4px' }}>
+              {currentPeriod}
+            </div>
+          </div>
+
+          {/* Alarm title & message */}
+          <div style={{ textAlign: 'center', marginBottom: '16px', maxWidth: '320px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: 'white', marginBottom: '8px', lineHeight: 1.3 }}>
+              {activeAlarmPopup?.title}
+            </h2>
+            {activeAlarmPopup?.message && activeAlarmPopup.message !== activeAlarmPopup.title && (
+              <p style={{ fontSize: '15px', color: 'rgba(173,216,255,0.8)', lineHeight: 1.5 }}>
+                {activeAlarmPopup.message}
+              </p>
+            )}
+          </div>
+
+          {/* Image (if available and loads successfully) */}
+          {activeAlarmPopup?.imageUrl && !imageError && (
+            <div style={{ width: '100%', maxWidth: '200px', marginBottom: '16px' }}>
+              <img
+                src={activeAlarmPopup.imageUrl}
+                alt="Reminder"
+                style={{ width: '100%', borderRadius: '12px', objectFit: 'contain', maxHeight: '160px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                onError={() => setImageError(true)}
+              />
+            </div>
+          )}
         </div>
 
-        {activeAlarmPopup?.imageUrl && (
-          <div className="p-4">
-            <img
-              src={activeAlarmPopup.imageUrl}
-              alt="Reminder"
-              className="w-full rounded-xl object-contain max-h-64 bg-slate-50"
-            />
-          </div>
-        )}
-
-        <div className="p-6 pt-2 space-y-3">
+        {/* Action buttons */}
+        <div style={{ padding: '8px 24px 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Button
-            onClick={() => snoozeAlarm(5)}
-            variant="outline"
-            className="w-full h-12 text-lg rounded-xl border-2 border-[#00BAF2] text-[#00BAF2] hover:bg-[#00BAF2]/10 font-semibold"
-            data-testid="button-remind-later"
-          >
-            {t.remindMeLater}
-          </Button>
-          <Button
-            onClick={dismissAlarm}
-            className="w-full h-12 text-lg rounded-xl bg-[#002E6E] hover:bg-[#002E6E]/90 text-white font-semibold"
+            onClick={() => dismissAlarm()}
+            style={{
+              width: '100%', height: '56px', fontSize: '18px', borderRadius: '16px',
+              backgroundColor: '#00BAF2', color: 'white', fontWeight: 'bold',
+              boxShadow: '0 8px 20px rgba(0,186,242,0.3)', border: 'none',
+              touchAction: 'manipulation',
+            }}
+            className="hover:bg-[#00a8dd] active:bg-[#0090c0] transition-all active:scale-[0.98]"
             data-testid="button-done"
           >
             {t.done}
           </Button>
+          <button
+            onClick={() => snoozeAlarm(5)}
+            style={{
+              width: '100%', height: '52px', fontSize: '16px', borderRadius: '16px',
+              backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.9)',
+              fontWeight: 600, border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer',
+              touchAction: 'manipulation',
+            }}
+            className="hover:text-white hover:bg-white/20 active:bg-white/30 transition-all active:scale-[0.98]"
+            data-testid="button-remind-later"
+          >
+            {t.remindMeLater}
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body
   );
 }

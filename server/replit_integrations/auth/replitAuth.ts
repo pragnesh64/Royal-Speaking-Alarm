@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 import { authStorage } from "./storage";
 
 const getOidcConfig = memoize(
@@ -20,21 +21,37 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Use MemoryStore for development (fast, no remote DB hit)
+  // Use PG store for production (persistent across restarts)
+  let store: session.Store;
+
+  if (isProduction) {
+    const pgStore = connectPg(session);
+    store = new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: false,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+    console.log('[Session] Using PostgreSQL session store');
+  } else {
+    const MemoryStore = createMemoryStore(session);
+    store = new MemoryStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    });
+    console.log('[Session] Using in-memory session store (fast dev mode)');
+  }
+
   return session({
     secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
+    store,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       maxAge: sessionTtl,
     },
   });
@@ -65,6 +82,14 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Skip OIDC setup if not running on Replit (local development)
+  if (!process.env.REPL_ID) {
+    console.log('[Auth] Running in local mode - Replit OIDC disabled');
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    return;
+  }
 
   const config = await getOidcConfig();
 

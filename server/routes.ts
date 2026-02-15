@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { invalidateUserCache } from "./replit_integrations/auth/routes";
 import { seed } from "./seed";
 import bcrypt from "bcryptjs";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -13,6 +14,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { getVapidPublicKey, savePushSubscription, removePushSubscription, sendPushNotification } from "./pushNotification";
 import { startAlarmScheduler } from "./alarmScheduler";
+import { setAlarmActiveStatus, handleAlarmToggle } from "./alarmToggleLogic";
 import multer from "multer";
 
 export async function registerRoutes(
@@ -36,10 +38,12 @@ export async function registerRoutes(
   app.post(api.alarms.create.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = {
+      let input = {
         ...req.body,
         userId: (req.user as any).id
       };
+      // Apply smart toggle logic - auto-set isActive based on future occurrences
+      input = setAlarmActiveStatus(input);
       const alarm = await storage.createAlarm(input);
       res.status(201).json(alarm);
     } catch (err) {
@@ -54,10 +58,21 @@ export async function registerRoutes(
   app.put(api.alarms.update.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const input = {
+      let input = {
         ...req.body,
         userId: (req.user as any).id
       };
+
+      // Detect if this is a manual toggle (only isActive is being updated)
+      const requestKeys = Object.keys(req.body);
+      const isManualToggle = requestKeys.length === 1 && requestKeys[0] === 'isActive';
+
+      // Apply smart toggle logic unless it's a manual toggle
+      if (!isManualToggle) {
+        input = setAlarmActiveStatus(input);
+      }
+      // For manual toggle, respect user's choice (keep input.isActive as is)
+
       const alarm = await storage.updateAlarm(Number(req.params.id), input);
       res.json(alarm);
     } catch (err) {
@@ -172,7 +187,10 @@ export async function registerRoutes(
   // User Settings
   app.patch("/api/user/settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const user = await storage.updateUser((req.user as any).id, req.body);
+    const userId = (req.user as any).id;
+    const user = await storage.updateUser(userId, req.body);
+    // Invalidate user cache so next /api/auth/user gets fresh data
+    invalidateUserCache(userId);
     res.json(user);
   });
 
@@ -509,11 +527,17 @@ export async function registerRoutes(
     }
   });
 
-  // Razorpay Integration
-  const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!
-  });
+  // Razorpay Integration (only if credentials are provided)
+  let razorpay: Razorpay | null = null;
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+    console.log('[Razorpay] Initialized');
+  } else {
+    console.log('[Razorpay] Credentials not found - Razorpay disabled');
+  }
 
   app.get("/api/razorpay/key", (req, res) => {
     res.json({ key: process.env.RAZORPAY_KEY_ID });
@@ -521,6 +545,9 @@ export async function registerRoutes(
 
   // Razorpay Webhook - handles payment.captured event
   app.post("/api/razorpay/webhook", async (req, res) => {
+    if (!razorpay) {
+      return res.status(503).json({ message: "Razorpay not configured" });
+    }
     try {
       const webhookSignature = req.headers['x-razorpay-signature'] as string;
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -580,7 +607,11 @@ export async function registerRoutes(
 
   app.post("/api/razorpay/create-order", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
+    if (!razorpay) {
+      return res.status(503).json({ message: "Razorpay not configured" });
+    }
+
     try {
       const { plan } = req.body;
       
@@ -614,7 +645,11 @@ export async function registerRoutes(
 
   app.post("/api/razorpay/verify-payment", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
+    if (!razorpay) {
+      return res.status(503).json({ message: "Razorpay not configured" });
+    }
+
     try {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
       const userId = (req.user as any).id;

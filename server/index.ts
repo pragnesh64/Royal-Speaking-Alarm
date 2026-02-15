@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -17,6 +18,14 @@ declare module "http" {
 
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  
+  // Skip Stripe entirely if no secret key is configured
+  if (!stripeKey) {
+    console.log('[Stripe] STRIPE_SECRET_KEY not found, skipping Stripe init');
+    return;
+  }
+  
   if (!databaseUrl) {
     console.log('[Stripe] DATABASE_URL not found, skipping Stripe init');
     return;
@@ -54,10 +63,8 @@ async function initStripe() {
   }
 }
 
-// Initialize Stripe (wrapped in IIFE for CommonJS compatibility)
-(async () => {
-  await initStripe();
-})();
+// Initialize Stripe in background — don't block server startup!
+initStripe().catch((err) => console.error('[Stripe] Background init error:', err));
 
 app.post(
   '/api/stripe/webhook',
@@ -83,6 +90,9 @@ app.post(
     }
   }
 );
+
+// Enable ETag for automatic client caching (304 Not Modified)
+app.set('etag', 'weak');
 
 app.use(
   express.json({
@@ -121,8 +131,15 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      // Only log small responses to avoid slow JSON.stringify on large arrays
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const bodyStr = JSON.stringify(capturedJsonResponse);
+        logLine += ` :: ${bodyStr.length > 200 ? bodyStr.slice(0, 200) + '...' : bodyStr}`;
+      }
+
+      // Warn on slow API calls
+      if (duration > 500) {
+        logLine = `⚠️ SLOW ${logLine}`;
       }
 
       log(logLine);
@@ -167,7 +184,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

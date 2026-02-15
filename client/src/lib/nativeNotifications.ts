@@ -1,5 +1,6 @@
 import { LocalNotifications, ScheduleOptions, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import FullScreenAlarm from '@/plugins/FullScreenAlarm';
 
 export interface AlarmData {
   id: number;
@@ -91,99 +92,133 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 export async function scheduleNativeAlarm(alarm: AlarmData): Promise<boolean> {
-  if (!await isNativeApp()) return false;
-  
+  if (!await isNativeApp()) {
+    console.log('[Native] Not a native app, skipping alarm schedule');
+    return false;
+  }
+
   try {
     const { hours, minutes } = parseTime(alarm.time);
     const scheduleDate = getNextOccurrence(hours, minutes, alarm.days, alarm.date);
-    
-    const notification: LocalNotificationSchema = {
-      id: alarm.id,
-      title: alarm.title,
-      body: alarm.body,
-      schedule: {
-        at: scheduleDate,
-        allowWhileIdle: true
-      },
-      sound: 'beep.wav',
-      smallIcon: 'ic_stat_icon',
-      iconColor: '#002E6E',
-      ongoing: false,
-      autoCancel: true,
-      extra: {
-        type: alarm.type,
-        alarmId: alarm.id
-      }
-    };
 
+    console.log(`[Native] ========================================`);
+    console.log(`[Native] Scheduling full-screen alarm ${alarm.id}`);
+    console.log(`[Native] Title: ${alarm.title}`);
+    console.log(`[Native] Time: ${scheduleDate.toLocaleString()}`);
+    console.log(`[Native] Days: ${alarm.days?.join(', ') || 'None (one-time)'}`);
+    console.log(`[Native] ========================================`);
+
+    // Check if FullScreenAlarm plugin is available
+    if (!FullScreenAlarm) {
+      console.error('[Native] ✗ FullScreenAlarm plugin is NOT available!');
+      return false;
+    }
+    console.log('[Native] ✓ FullScreenAlarm plugin is available');
+
+    // Use FullScreenAlarm plugin for alarms that need to wake the screen
     if (alarm.days && alarm.days.length > 0) {
+      // For recurring alarms, schedule each day
       const dayMap: Record<string, 1|2|3|4|5|6|7> = {
         'Sun': 1, 'Mon': 2, 'Tue': 3, 'Wed': 4, 'Thu': 5, 'Fri': 6, 'Sat': 7
       };
-      
+
       for (const day of alarm.days) {
         const notificationId = alarm.id * 10 + dayMap[day];
-        const daySchedule = getNextOccurrence(hours, minutes, [day]);
-        
-        await LocalNotifications.schedule({
-          notifications: [{
-            ...notification,
-            id: notificationId,
-            schedule: {
-              at: daySchedule,
-              allowWhileIdle: true,
-              repeats: true,
-              every: 'week'
-            }
-          }]
+
+        // Schedule repeating alarm for specific day
+        await FullScreenAlarm.scheduleRepeating({
+          id: notificationId,
+          title: alarm.title,
+          body: alarm.body,
+          hour: hours,
+          minute: minutes,
+          type: alarm.type
         });
       }
     } else {
-      await LocalNotifications.schedule({
-        notifications: [notification]
+      // One-time alarm
+      await FullScreenAlarm.schedule({
+        id: alarm.id,
+        title: alarm.title,
+        body: alarm.body,
+        triggerAtMillis: scheduleDate.getTime(),
+        type: alarm.type,
+        allowWhileIdle: true
       });
     }
-    
-    console.log(`[Native] Scheduled alarm ${alarm.id} for ${scheduleDate.toLocaleString()}`);
+
+    console.log(`[Native] Full-screen alarm ${alarm.id} scheduled successfully`);
     return true;
   } catch (error) {
-    console.error('[Native] Failed to schedule alarm:', error);
+    console.error('[Native] Failed to schedule full-screen alarm:', error);
     return false;
   }
 }
 
 export async function cancelNativeAlarm(alarmId: number): Promise<void> {
   if (!await isNativeApp()) return;
-  
+
   try {
-    const idsToCancel = [alarmId];
+    // Cancel main alarm
+    await FullScreenAlarm.cancel({ id: alarmId });
+
+    // Cancel all day-specific alarms (for recurring alarms)
     for (let i = 1; i <= 7; i++) {
-      idsToCancel.push(alarmId * 10 + i);
+      await FullScreenAlarm.cancel({ id: alarmId * 10 + i });
     }
-    
-    await LocalNotifications.cancel({ notifications: idsToCancel.map(id => ({ id })) });
-    console.log(`[Native] Cancelled alarm ${alarmId}`);
+
+    console.log(`[Native] Cancelled full-screen alarm ${alarmId}`);
   } catch (error) {
-    console.error('[Native] Failed to cancel alarm:', error);
+    console.error('[Native] Failed to cancel full-screen alarm:', error);
   }
 }
 
 export async function syncAllAlarms(alarms: AlarmData[]): Promise<void> {
   if (!await isNativeApp()) return;
-  
+
   try {
-    const pending = await LocalNotifications.getPending();
-    if (pending.notifications.length > 0) {
-      await LocalNotifications.cancel({ notifications: pending.notifications });
+    console.log(`[Native] ======== SYNCING ${alarms.length} ALARMS ========`);
+
+    // STEP 1: Cancel ALL old LocalNotifications alarms (old system)
+    try {
+      console.log('[Native] Step 1: Canceling old LocalNotifications alarms...');
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.length > 0) {
+        const oldIds = pending.notifications.map(n => n.id);
+        await LocalNotifications.cancel({ notifications: oldIds.map(id => ({ id })) });
+        console.log(`[Native] ✓ Canceled ${oldIds.length} old LocalNotifications alarms`);
+      } else {
+        console.log('[Native] ✓ No old LocalNotifications alarms to cancel');
+      }
+    } catch (error) {
+      console.error('[Native] Failed to cancel old LocalNotifications:', error);
     }
-    
+
+    // STEP 2: Cancel all existing FullScreenAlarm alarms
+    console.log('[Native] Step 2: Canceling existing FullScreenAlarm alarms...');
+    const allAlarmIds = alarms.map(a => a.id);
+    for (const id of allAlarmIds) {
+      await cancelNativeAlarm(id);
+    }
+    console.log(`[Native] ✓ Canceled ${allAlarmIds.length} FullScreenAlarm alarms`);
+
+    // STEP 3: Schedule all active alarms with FullScreenAlarm
+    console.log('[Native] Step 3: Scheduling new FullScreenAlarm alarms...');
+    let successCount = 0;
+    let failCount = 0;
     for (const alarm of alarms) {
-      await scheduleNativeAlarm(alarm);
+      const success = await scheduleNativeAlarm(alarm);
+      if (success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
     }
-    
-    console.log(`[Native] Synced ${alarms.length} alarms`);
+
+    console.log(`[Native] ✓ Sync complete: ${successCount} succeeded, ${failCount} failed`);
+    console.log(`[Native] ========================================`);
   } catch (error) {
-    console.error('[Native] Failed to sync alarms:', error);
+    console.error('[Native] Failed to sync full-screen alarms:', error);
   }
 }
 
