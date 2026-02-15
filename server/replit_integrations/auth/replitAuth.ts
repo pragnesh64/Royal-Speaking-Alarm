@@ -33,8 +33,10 @@ export function getSession() {
     store = new pgStore({
       pool: pool,                   // Reuse the app's existing PG pool (has SSL configured)
       createTableIfMissing: true,
-      ttl: sessionTtl,
+      ttl: sessionTtl / 1000,       // CRITICAL FIX: TTL in SECONDS, not milliseconds!
       tableName: "sessions",
+      pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 min
+      errorLog: (err: any) => console.error('[Session Store] Error:', err),
     });
     console.log('[Session] Using PostgreSQL session store (shared pool)');
   } else {
@@ -48,14 +50,18 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
     store,
-    resave: false,
-    saveUninitialized: false,
-    proxy: isProduction,           // Trust the reverse proxy (Vercel)
+    resave: false,              // Don't save session if unmodified (reduces DB writes)
+    saveUninitialized: false,   // Don't create session until something stored (GDPR friendly)
+    rolling: true,              // CRITICAL FIX: Reset maxAge on every request (keeps session alive)
+    proxy: isProduction,        // Trust the reverse proxy (Vercel)
+    name: 'connect.sid',        // Explicit session cookie name
     cookie: {
-      httpOnly: true,
-      secure: isProduction,        // HTTPS only in production
-      sameSite: 'lax',             // Required for cross-request cookie persistence
+      httpOnly: true,           // Prevent XSS attacks
+      secure: isProduction,     // HTTPS only in production
+      sameSite: isProduction ? 'none' : 'lax', // CRITICAL FIX: 'none' for cross-origin in prod
       maxAge: sessionTtl,
+      path: '/',                // Cookie available on all routes
+      domain: isProduction ? '.vercel.app' : undefined, // Allow subdomain sharing
     },
   });
 }
