@@ -8,6 +8,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 import { authStorage } from "./storage";
+import { pool } from "../../db";
 
 const getOidcConfig = memoize(
   async () => {
@@ -24,18 +25,18 @@ export function getSession() {
   const isProduction = process.env.NODE_ENV === 'production';
 
   // Use MemoryStore for development (fast, no remote DB hit)
-  // Use PG store for production (persistent across restarts)
+  // Use PG store for production (persistent across restarts & serverless invocations)
   let store: session.Store;
 
-  if (isProduction) {
+  if (isProduction && process.env.DATABASE_URL) {
     const pgStore = connectPg(session);
     store = new pgStore({
-      conString: process.env.DATABASE_URL,
+      pool: pool,                   // Reuse the app's existing PG pool (has SSL configured)
       createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
     });
-    console.log('[Session] Using PostgreSQL session store');
+    console.log('[Session] Using PostgreSQL session store (shared pool)');
   } else {
     const MemoryStore = createMemoryStore(session);
     store = new MemoryStore({
@@ -45,13 +46,15 @@ export function getSession() {
   }
 
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
     store,
     resave: false,
     saveUninitialized: false,
+    proxy: isProduction,           // Trust the reverse proxy (Vercel)
     cookie: {
       httpOnly: true,
-      secure: isProduction,
+      secure: isProduction,        // HTTPS only in production
+      sameSite: 'lax',             // Required for cross-request cookie persistence
       maxAge: sessionTtl,
     },
   });

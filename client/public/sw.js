@@ -30,6 +30,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
+  // NEVER intercept API calls — let the browser handle cookies/auth directly
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/')) return;
+  
   event.respondWith(
     fetch(event.request)
       .then((response) => {

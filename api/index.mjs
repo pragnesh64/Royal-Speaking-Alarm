@@ -494,15 +494,16 @@ function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
   const isProduction = process.env.NODE_ENV === "production";
   let store;
-  if (isProduction) {
+  if (isProduction && process.env.DATABASE_URL) {
     const pgStore = connectPg(session);
     store = new pgStore({
-      conString: process.env.DATABASE_URL,
+      pool,
+      // Reuse the app's existing PG pool (has SSL configured)
       createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions"
     });
-    console.log("[Session] Using PostgreSQL session store");
+    console.log("[Session] Using PostgreSQL session store (shared pool)");
   } else {
     const MemoryStore = createMemoryStore(session);
     store = new MemoryStore({
@@ -512,13 +513,18 @@ function getSession() {
     console.log("[Session] Using in-memory session store (fast dev mode)");
   }
   return session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "dev-secret-change-me",
     store,
     resave: false,
     saveUninitialized: false,
+    proxy: isProduction,
+    // Trust the reverse proxy (Vercel)
     cookie: {
       httpOnly: true,
       secure: isProduction,
+      // HTTPS only in production
+      sameSite: "lax",
+      // Required for cross-request cookie persistence
       maxAge: sessionTtl
     }
   });

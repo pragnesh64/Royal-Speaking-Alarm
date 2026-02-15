@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'MyPA',
   webDir: 'dist/public',
   server: {
-    url: 'http://10.195.157.10:8080',
+    url: 'https://mypa-app.vercel.app',
     androidScheme: 'http',
     cleartext: true
   },
